@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="htmlTag">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>برج بلازما الطبي - الحوامدية | Plasma Medical Tower</title>
+    <!-- Google Fonts: Cairo & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for ERP dashboard charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #138A9E;         /* Primary Medical Teal */
+            --primary-dark: #0b5a68;
+            --primary-light: #e6f6f8;
+            --navy: #063B4A;            /* Deep Healthcare Navy */
+            --navy-dark: #03232c;
+            --cyan: #20C4D9;            /* Healthcare Cyan */
+            --cyan-light: #e8f9fc;
+            --bg-light: #F5FAFA;        /* Soft Canvas Background */
+            --surface: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --shadow-sm: 0 2px 4px 0 rgb(6 59 74 / 0.05);
+            --shadow-md: 0 8px 16px -2px rgb(19 138 158 / 0.12);
+            --shadow-lg: 0 20px 40px -6px rgb(6 59 74 / 0.18);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-full: 9999px;
+            --font-ar: 'Cairo', sans-serif;
+            --font-en: 'Inter', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-ar);
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            direction: rtl;
+            text-align: right;
+        }
+
+        [dir="ltr"], .ltr {
+            font-family: var(--font-en) !important;
+            direction: ltr !important;
+            text-align: left;
+        }
+
+        [dir="ltr"] .hero-card-floating { left: -30px; right: auto; }
+        [dir="ltr"] .doctor-badge { right: auto; left: 14px; }
+        [dir="ltr"] .btn i { margin-right: 8px; margin-left: 0; }
+
+        /* PLATFORM NAVIGATION BAR SWITCHER */
+        .platform-bar {
+            background-color: var(--navy-dark);
+            color: #ffffff;
+            padding: 8px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .module-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .module-selector::-webkit-scrollbar { display: none; }
+
+        .module-btn {
+            background: rgba(255,255,255,0.08);
+            color: #CBD5E1;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .module-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .module-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 800;
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(19, 138, 158, 0.4);
+        }
+
+        /* MAIN SITE HEADER */
+        .site-header {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 48px;
+            z-index: 900;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 900;
+            color: var(--navy);
+            text-decoration: none;
+            font-size: 22px;
+        }
+
+        .logo-box {
+            width: 44px;
+            height: 44px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 22px;
+            box-shadow: 0 4px 12px rgba(19, 138, 158, 0.35);
+        }
+
+        .site-nav { display: flex; gap: 28px; list-style: none; }
+        .site-nav a { text-decoration: none; color: var(--text-main); font-weight: 700; font-size: 15px; transition: color 0.2s ease; }
+        .site-nav a:hover, .site-nav a.active { color: var(--primary); }
+
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+
+        .lang-toggle-btn {
+            background: var(--primary-light);
+            color: var(--primary);
+            border: 1px solid rgba(19, 138, 158, 0.3);
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .lang-toggle-btn:hover { background: var(--primary); color: #ffffff; }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: var(--radius-md);
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .btn-primary { background-color: var(--primary); color: #ffffff; box-shadow: 0 4px 14px rgba(19, 138, 158, 0.3); }
+        .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(19, 138, 158, 0.4); }
+        .btn-navy { background-color: var(--navy); color: #ffffff; }
+        .btn-navy:hover { background-color: var(--navy-dark); transform: translateY(-2px); }
+        .btn-outline { background-color: transparent; border-color: var(--primary); color: var(--primary); }
+        .btn-outline:hover { background-color: var(--primary); color: #ffffff; }
+
+        .badge { padding: 5px 12px; border-radius: var(--radius-full); font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+        .badge-teal { background: var(--primary-light); color: var(--primary); }
+        .badge-navy { background: #e0ecef; color: var(--navy); }
+        .badge-success { background: var(--success-light); color: var(--success); }
+
+        /* VIEW MODULES */
+        .view-module { display: none; width: 100%; animation: fadeIn 0.35s ease-in-out; }
+        .view-module.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* HERO SECTION */
+        .hero-section {
+            background: linear-gradient(135deg, #03232c 0%, #063B4A 60%, #138A9E 100%);
+            color: #ffffff;
+            padding: 90px 5% 120px 5%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+
+        .hero-tag {
+            background: rgba(32, 196, 217, 0.18);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            padding: 8px 20px;
+            border-radius: var(--radius-full);
+            font-size: 13px;
+            font-weight: 800;
+            display: inline-block;
+            margin-bottom: 24px;
+        }
+
+        .hero-title { font-size: 52px; line-height: 1.25; font-weight: 900; margin-bottom: 24px; }
+        .hero-title span { color: var(--cyan); display: block; }
+        .hero-subtitle { font-size: 19px; color: #cbd5e1; margin-bottom: 40px; max-width: 560px; line-height: 1.8; }
+        .hero-ctas { display: flex; gap: 18px; flex-wrap: wrap; }
+
+        .hero-image-wrapper { position: relative; }
+
+        .hero-card-floating {
+            position: absolute;
+            bottom: -35px;
+            right: -35px;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            color: var(--text-main);
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            max-width: 310px;
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+
+        .hero-img-box {
+            width: 100%;
+            height: 460px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80') center/cover;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            border: 4px solid rgba(255,255,255,0.15);
+        }
+
+        /* CONVERSATIONAL TRIAGE */
+        .triage-wrapper {
+            background: #ffffff;
+            margin: -50px 5% 60px 5%;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 36px;
+            position: relative;
+            z-index: 20;
+            border: 1px solid var(--border-color);
+        }
+
+        .triage-title { font-size: 22px; font-weight: 900; color: var(--navy); margin-bottom: 20px; text-align: center; }
+        .triage-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+        .triage-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 22px 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .triage-card:hover { background: var(--cyan-light); border-color: var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .triage-icon { width: 52px; height: 52px; background: #ffffff; color: var(--primary); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 14px auto; box-shadow: var(--shadow-sm); }
+
+        /* TRUST STATS BAR */
+        .trust-stats-bar { padding: 20px 5%; max-width: 1240px; margin: 0 auto 60px auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+        .stat-item { background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-color); padding: 28px 20px; text-align: center; box-shadow: var(--shadow-sm); }
+        .stat-number { font-size: 40px; font-weight: 900; color: var(--primary); line-height: 1.1; margin-bottom: 8px; }
+        .stat-label { color: var(--text-muted); font-size: 14px; font-weight: 700; }
+
+        /* SPECIALTIES GRID */
+        .section-wrapper { padding: 70px 5%; max-width: 1280px; margin: 0 auto; }
+        .section-header { text-align: center; margin-bottom: 54px; }
+        .section-title { font-size: 34px; font-weight: 900; color: var(--navy); margin-bottom: 14px; }
+        .section-subtitle { color: var(--text-muted); font-size: 17px; max-width: 660px; margin: 0 auto; line-height: 1.8; }
+        .specialties-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 28px; }
+
+        .specialty-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 30px 24px; transition: all 0.3s ease; cursor: pointer; box-shadow: var(--shadow-sm); }
+        .specialty-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+        .specialty-icon { width: 64px; height: 64px; background: var(--primary-light); color: var(--primary); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px; }
+        .specialty-name { font-size: 20px; font-weight: 800; margin-bottom: 10px; color: var(--navy); }
+        .specialty-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.65; }
+        .specialty-doctors { font-size: 13px; font-weight: 800; color: var(--primary); display: flex; align-items: center; justify-content: space-between; }
+
+        /* DOCTOR DIRECTORY */
+        .doctors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; }
+        .doctor-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); transition: all 0.3s ease; }
+        .doctor-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-6px); }
+        .doctor-img-wrap { height: 240px; background-size: cover; background-position: center; position: relative; }
+        .doctor-badge { position: absolute; top: 14px; left: 14px; background: rgba(255,255,255,0.95); padding: 5px 14px; border-radius: var(--radius-full); font-size: 12px; font-weight: 800; color: var(--primary); }
+        .doctor-info { padding: 24px; }
+        .doctor-name { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+        .doctor-spec { color: var(--primary); font-weight: 700; font-size: 14px; margin-bottom: 14px; }
+        .doctor-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+
+        /* BOOKING WIZARD */
+        .booking-wizard-container { max-width: 880px; margin: 50px auto; background: #ffffff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); overflow: hidden; }
+        .wizard-header { background: var(--navy); color: #ffffff; padding: 40px 36px; text-align: center; }
+        .wizard-steps-indicator { display: flex; justify-content: space-between; padding: 24px 36px; background: #f8fafc; border-bottom: 1px solid var(--border-color); }
+        .step-item { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text-muted); }
+        .step-item.active { color: var(--primary); }
+        .step-item.completed { color: var(--success); }
+        .step-number { width: 32px; height: 32px; border-radius: 50%; background: var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+        .step-item.active .step-number { background: var(--primary); color: #ffffff; }
+        .step-item.completed .step-number { background: var(--success); color: #ffffff; }
+        .wizard-body { padding: 40px; }
+        .form-group { margin-bottom: 24px; }
+        .form-label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 8px; color: var(--text-main); }
+        .form-control { width: 100%; padding: 14px 18px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 15px; font-family: inherit; transition: all 0.2s; }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+
+        /* DASHBOARD LAYOUT (ERP, DOCTOR, RECEPTION) */
+        .dashboard-layout { display: flex; min-height: calc(100vh - 100px); }
+        .sidebar { width: 270px; background: var(--navy-dark); color: #94A3B8; padding: 28px 18px; display: flex; flex-direction: column; gap: 28px; }
+        .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-md); color: #CBD5E1; text-decoration: none; font-size: 14px; font-weight: 700; transition: all 0.2s; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(32, 196, 217, 0.18); color: var(--cyan); font-weight: 800; }
+        .dashboard-main { flex: 1; background: var(--bg-light); padding: 36px; overflow-y: auto; }
+        .dash-topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .dash-title { font-size: 28px; font-weight: 900; color: var(--navy); }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-bottom: 32px; }
+        .kpi-card { background: #ffffff; padding: 22px; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; }
+        .kpi-val { font-size: 30px; font-weight: 900; color: var(--navy); margin-top: 4px; }
+        .kpi-icon { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .table-card { background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 32px; }
+        .table-header { padding: 22px 28px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .table { width: 100%; border-collapse: collapse; text-align: right; font-size: 14px; }
+        .table th { background: #f8fafc; padding: 14px 28px; font-weight: 800; color: var(--text-muted); border-bottom: 1px solid var(--border-color); }
+        .table td { padding: 18px 28px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+
+        /* TV QUEUE DISPLAY */
+        .tv-queue-wrapper { background: #021820; color: #ffffff; min-height: calc(100vh - 100px); padding: 48px; display: flex; flex-direction: column; }
+        .tv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 28px; margin-bottom: 48px; }
+        .now-serving-box { background: linear-gradient(135deg, rgba(6, 59, 74, 0.95), rgba(19, 138, 158, 0.4)); border: 3px solid var(--cyan); border-radius: var(--radius-lg); padding: 56px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 0 50px rgba(32, 196, 217, 0.4); }
+        .now-serving-number { font-size: 120px; font-weight: 900; color: #ffffff; text-shadow: 0 0 24px var(--cyan); margin-bottom: 20px; }
+
+        /* CRM CALL CENTER */
+        .crm-layout { display: grid; grid-template-columns: 340px 1fr 340px; gap: 28px; padding: 28px; background: var(--bg-light); min-height: calc(100vh - 100px); }
+        .softphone-card { background: #ffffff; border-radius: var(--radius-lg); border: 1px solid var(--border-color); padding: 28px; box-shadow: var(--shadow-md); }
+
+        /* FOOTER */
+        .site-footer { background: var(--navy-dark); color: #94A3B8; padding: 70px 5% 35px 5%; margin-top: 90px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .footer-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+        .footer-bottom { max-width: 1280px; margin: 0 auto; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <!-- PLATFORM TOOLBAR -->
+    <div class="platform-bar">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="background: linear-gradient(135deg, var(--primary), var(--cyan)); color: #fff; padding: 3px 10px; border-radius: 4px; font-weight: 900; font-size: 11px;">PLASMA OS v3.0</div>
+            <div style="font-weight: 800;" id="txtPlatTitle">برج بلازما الطبي - الحوامدية</div>
+        </div>
+
+        <div class="module-selector">
+            <button class="module-btn active" onclick="switchModule('mod-website', this)"><i class="fa-solid fa-globe"></i> <span id="m1">01. الموقع الإلكتروني</span></button>
+            <button class="module-btn" onclick="switchModule('mod-booking', this)"><i class="fa-solid fa-calendar-check"></i> <span id="m2">02. حجز المواعيد</span></button>
+            <button class="module-btn" onclick="switchModule('mod-portal', this)"><i class="fa-solid fa-user-gear"></i> <span id="m3">03. بوابة المريض</span></button>
+            <button class="module-btn" onclick="switchModule('mod-staff-login', this)"><i class="fa-solid fa-right-to-bracket"></i> <span id="mStaff">04. دخول الموظفين</span></button>
+            <button class="module-btn" onclick="switchModule('mod-admin', this)"><i class="fa-solid fa-chart-line"></i> <span id="m4">05. ERP القيادة الطبية</span></button>
+            <button class="module-btn" onclick="switchModule('mod-reception', this)"><i class="fa-solid fa-clipboard-user"></i> <span id="mRec">06. الاستقبال والحجز</span></button>
+            <button class="module-btn" onclick="switchModule('mod-tvqueue', this)"><i class="fa-solid fa-tv"></i> <span id="m6">07. شاشات الانتظار TV</span></button>
+            <button class="module-btn" onclick="switchModule('mod-doctor', this)"><i class="fa-solid fa-user-doctor"></i> <span id="m7">08. كابينة الطبيب EMR</span></button>
+            <button class="module-btn" onclick="switchModule('mod-crm', this)"><i class="fa-solid fa-headset"></i> <span id="m11">09. CRM الكول سنتر</span></button>
+        </div>
+
+        <div>
+            <button class="lang-toggle-btn" onclick="toggleLanguage()"><i class="fa-solid fa-globe"></i> <span id="lblLangTop">English</span></button>
+        </div>
+    </div>
+
+    <!-- MAIN SITE HEADER -->
+    <header class="site-header">
+        <a href="#" class="brand-logo">
+            <div class="logo-box"><i class="fa-solid fa-stethoscope"></i></div>
+            <span id="txtLogoTitle">برج <span>بلازما الطبي</span></span>
+        </a>
+
+        <ul class="site-nav">
+            <li><a href="#home" class="active" id="navHome">الرئيسية</a></li>
+            <li><a href="#specialties" id="navSpecialties">التخصصات</a></li>
+            <li><a href="#doctors" id="navDoctors">الأطباء</a></li>
+            <li><a href="#services" id="navServices">الخدمات</a></li>
+            <li><a href="#about" id="navAbout">عن البرج</a></li>
+            <li><a href="#contact" id="navContact">اتصل بنا</a></li>
+        </ul>
+
+        <div class="header-actions">
+            <button class="btn btn-outline" onclick="switchModule('mod-staff-login', document.querySelectorAll('.module-btn')[3])" id="btnStaffHeader"><i class="fa-solid fa-user-shield"></i> <span id="lblStaffBtn">دخول الموظفين</span></button>
+            <button class="btn btn-primary" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])"><i class="fa-regular fa-calendar-check"></i> <span id="lblBookBtn">احجز موعدك</span></button>
+        </div>
+    </header>
+
+    <div class="app-container">
+
+        <!-- ==================================================== -->
+        <!-- MODULE 01: PATIENT WEBSITE HOME                     -->
+        <!-- ==================================================== -->
+        <div id="mod-website" class="view-module active">
+            <!-- HERO SECTION -->
+            <section class="hero-section" id="home">
+                <div class="hero-grid">
+                    <div>
+                        <span class="hero-tag" id="heroTag"><i class="fa-solid fa-location-dot"></i> الحوامدية – بجوار بنك الإسكندرية – أمام المرور</span>
+                        <h1 class="hero-title" id="heroTitle">برج بلازما الطبي.<br><span>رعاية طبية متكاملة تحت سقف واحد.</span></h1>
+                        <p class="hero-subtitle" id="heroSubtitle">أحدث تجمع طبي متخصص بالحوامدية يضم نخبة استشاريي الجامعات وأحدث أجهزة التشخيص والجراحة.</p>
+                        <div class="hero-ctas">
+                            <button class="btn btn-primary" style="background: var(--cyan); color: var(--navy-dark);" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])" id="heroCtaPrimary"><i class="fa-solid fa-calendar-plus"></i> احجز موعدك الآن</button>
+                            <button class="btn btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.4);" id="heroCtaSecondary" onclick="scrollToSpecialties()"><i class="fa-solid fa-stethoscope"></i> استكشف 16+ تخصصاً</button>
+                        </div>
+                    </div>
+                    <div class="hero-image-wrapper">
+                        <div class="hero-img-box"></div>
+                        <div class="hero-card-floating">
+                            <div style="width: 52px; height: 52px; background: var(--primary-light); color: var(--primary); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px;">
+                                <i class="fa-solid fa-user-nurse"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 900; font-size: 17px;" id="heroFloatTitle">نخبة الاستشاريين</div>
+                                <div style="font-size: 13px; color: var(--text-muted);" id="heroFloatSub">● متاحون اليوم للحجز المباشر</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GUIDED TRIAGE -->
+            <div class="triage-wrapper">
+                <div class="triage-title" id="trTitle">كيف يمكننا مساعدتك اليوم؟</div>
+                <div class="triage-grid">
+                    <div class="triage-card" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])">
+                        <div class="triage-icon"><i class="fa-solid fa-user-doctor"></i></div>
+                        <strong id="tr1Title">أحتاج طبيباً</strong>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;" id="tr1Sub">حجز كبار الاستشاريين</p>
+                    </div>
+
+                    <div class="triage-card" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])">
+                        <div class="triage-icon"><i class="fa-solid fa-vial"></i></div>
+                        <strong id="tr2Title">أحتاج تحليلاً طبياً</strong>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;" id="tr2Sub">معمل بلازما المؤتمت</p>
+                    </div>
+
+                    <div class="triage-card" onclick="alert('خط الطوارئ والاتصال السريع: 01021869999 / 01035719999 (24/7)')">
+                        <div class="triage-icon" style="color: var(--danger);"><i class="fa-solid fa-truck-medical"></i></div>
+                        <strong id="tr3Title">طوارئ بلازما</strong>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;" id="tr3Sub">اتصال مباشر 24/7</p>
+                    </div>
+
+                    <div class="triage-card" onclick="switchModule('mod-portal', document.querySelectorAll('.module-btn')[2])">
+                        <div class="triage-icon" style="color: var(--primary);"><i class="fa-solid fa-notes-medical"></i></div>
+                        <strong id="tr4Title">استعلام النتائج</strong>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;" id="tr4Sub">بوابة المرضى الإلكترونية</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRUST STATS BAR -->
+            <div class="trust-stats-bar">
+                <div class="stat-item">
+                    <div class="stat-number">20+</div>
+                    <div class="stat-label" id="stat1">تخصصاً طبياً متكاملاً</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label" id="stat2">طبيباً واستشارياً</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">10,000+</div>
+                    <div class="stat-label" id="stat3">مريضاً متميزاً</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">99%</div>
+                    <div class="stat-label" id="stat4">نسبة رضا المرضى</div>
+                </div>
+            </div>
+
+            <!-- SPECIALTIES GRID -->
+            <div class="section-wrapper" id="specialties">
+                <div class="section-header">
+                    <h2 class="section-title" id="specTitle">التخصصات الطبية ببرج بلازما</h2>
+                    <p class="section-subtitle" id="specSubtitle">أكبر تجمع للعيادات التخصصية الشاملة بالحوامدية تحت إشراف نخبة أساتذة الطب.</p>
+                </div>
+
+                <div class="specialties-grid">
+                    <div class="specialty-card" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])">
+                        <div class="specialty-icon"><i class="fa-solid fa-tooth"></i></div>
+                        <div class="specialty-name" id="sp1Name">طب وجراحة الأسنان</div>
+                        <div class="specialty-desc" id="sp1Desc">تجميل وزراعة الأسنان، التقويم، والجراحة بأحدث الأجهزة.</div>
+                        <div class="specialty-doctors"><span id="sp1Docs">8 استشاريين</span> <i class="fa-solid fa-arrow-left"></i></div>
+                    </div>
+
+                    <div class="specialty-card" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])">
+                        <div class="specialty-icon"><i class="fa-solid fa-bone"></i></div>
+                        <div class="specialty-name" id="sp2Name">جراحة العظام والمفاصل</div>
+                        <div class="specialty-desc" id="sp2Desc">علاج المفاصل، العمود الفقري، المناظير واستعادة الحركة.</div>
+                        <div class="specialty-doctors"><span id="sp2Docs">6 استشاريين</span> <i class="fa-solid fa-arrow-left"></i></div>
+                    </div>
+
+                    <div class="specialty-card" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])">
+                        <div class="specialty-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                        <div class="specialty-name" id="sp3Name">أمراض القلب والأوعية</div>
+                        <div class="specialty-desc" id="sp3Desc">فحوصات القلب الشاملة، رسم القلب وقسطرة الأوعية.</div>
+                        <div class="specialty-doctors"><span id="sp3Docs">5 استشاريين</span> <i class="fa-solid fa-arrow-left"></i></div>
+                    </div>
+
+                    <div class="specialty-card" onclick="switchModule('mod-booking', document.querySelectorAll('.module-btn')[1])">
+                        <div class="specialty-icon"><i class="fa-solid fa-stethosocpe"></i></div>
+                        <div class="specialty-name" id="sp4Name">الباطنة والسكر</div>
+                        <div class="specialty-desc" id="sp4Desc">علاج الأمراض المزمنة، الجهاز الهضمي، ومتابعة السكر.</div>
+                        <div class="specialty-doctors"><span id="sp4Docs">7 استشاريين</span> <i class="fa-solid fa-arrow-left"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- MODULE 02: STAFF LOGIN PORTAL                       -->
+        <!-- ==================================================== -->
+        <div id="mod-staff-login" class="view-module">
+            <div style="max-width: 520px; margin: 60px auto; background: #ffffff; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); padding: 40px;">
+                <div style="text-align: center; margin-bottom: 28px;">
+                    <div class="logo-box" style="margin: 0 auto 16px auto;"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h2 style="color: var(--navy); font-size: 24px; font-weight: 900;">بوابة دخول الموظفين والطاقم الطبي</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">برج بلازما الطبي - الحوامدية</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">اختر دور المستخدم</label>
+                    <select class="form-control" id="loginRole">
+                        <option value="admin">مدير النظام (Admin ERP)</option>
+                        <option value="doctor">طبيب استشاري (Doctor Cockpit)</option>
+                        <option value="reception">موظف الاستقبال (Receptionist)</option>
+                        <option value="lab">فني المختبر (LIMS)</option>
+                        <option value="rad">فني الأشعة (PACS)</option>
+                        <option value="crm">مأمور الكول سنتر (Call Center CRM)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">البريد الإلكتروني / اسم المستخدم</label>
+                    <input type="text" class="form-control" value="dr.ahmed@plasmameditower.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">كلمة المرور</label>
+                    <input type="password" class="form-control" value="••••••••••••">
+                </div>
+
+                <button class="btn btn-navy" style="width: 100%; padding: 14px; font-size: 16px;" onclick="handleStaffLogin()">
+                    <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول للنظام
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- MODULE 03: ONLINE BOOKING FLOW                       -->
+        <!-- ==================================================== -->
+        <div id="mod-booking" class="view-module">
+            <div class="booking-wizard-container">
+                <div class="wizard-header">
+                    <h2>احجز موعدك الطبي ببرج بلازما</h2>
+                    <p style="opacity: 0.85; font-size: 15px; margin-top: 6px;">حجز رقمي مباشر وسريع في 5 خطوات بسيطة</p>
+                </div>
+
+                <div class="wizard-body">
+                    <div class="form-group">
+                        <label class="form-label">اختر القسم / التخصص الطبي</label>
+                        <select class="form-control">
+                            <option>جراحة العظام والمفاصل</option>
+                            <option>طب وجراحة الأسنان</option>
+                            <option>أمراض القلب والأوعية</option>
+                            <option>الباطنة والسكر</option>
+                            <option>طب الأطفال</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label class="form-label">تاريخ الموعد المفضل</label>
+                            <input type="date" class="form-control" value="2026-09-10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">الوقت المفضل</label>
+                            <select class="form-control">
+                                <option>10:00 صباحاً</option>
+                                <option>11:30 صباحاً</option>
+                                <option>04:30 مساءً</option>
+                                <option>06:00 مساءً</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">اسم المريض بالكامل</label>
+                        <input type="text" class="form-control" placeholder="أدخل اسم المريض الرباعي" value="محمد أحمد سعيد">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">رقم الجوال (لتأكيد الواتساب)</label>
+                        <input type="tel" class="form-control" value="01021869999">
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 16px;" onclick="confirmBooking()">
+                        <i class="fa-solid fa-paper-plane"></i> تأكيد الحجز والحصول على رمز QR
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- MODULE 05: ERP COMMAND CENTER (ADMIN)                -->
+        <!-- ==================================================== -->
+        <div id="mod-admin" class="view-module">
+            <div class="dashboard-layout">
+                <aside class="sidebar">
+                    <div style="font-size: 18px; font-weight: 800; color: #fff;"><i class="fa-solid fa-hospital" style="color: var(--cyan);"></i> بلازما ERP</div>
+                    <ul class="sidebar-menu">
+                        <li><a href="#" class="sidebar-link active"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم الرئيسي</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-hospital-user"></i> المرضى (2,350)</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-calendar-check"></i> المواعيد اليوم (48)</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-user-doctor"></i> الأطباء الاستشاريين</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-receipt"></i> الفوترة والمدفوعات</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-vials"></i> المختبر والأشعة</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-boxes-stacked"></i> المخزون والصيدلية</a></li>
+                        <li><a href="#" class="sidebar-link"><i class="fa-solid fa-vault"></i> التقارير والمحاسبة</a></li>
+                    </ul>
+                </aside>
+
+                <main class="dashboard-main">
+                    <!-- AI INSIGHTS BANNER -->
+                    <div style="background: linear-gradient(135deg, var(--navy), var(--primary)); color: #fff; padding: 20px 24px; border-radius: var(--radius-md); margin-bottom: 28px; display: flex; align-items: center; gap: 18px; box-shadow: var(--shadow-md);">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 26px; color: var(--cyan);"></i>
+                        <div>
+                            <strong>توصيات الذكاء الاصطناعي التشغيلي:</strong> انخفض زمن الانتظار بنسبة 18% اليوم | قسم العظام لديه مواعيد متاحة | ضغط المختبر ارتفع بنسبة 12%.
+                        </div>
+                    </div>
+
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div>
+                                <div style="color: var(--text-muted); font-size: 13px;">المواعيد اليوم</div>
+                                <div class="kpi-val">48 موعداً</div>
+                                <div style="color: var(--success); font-size: 12px; margin-top: 4px;">+8% عن أمس</div>
+                            </div>
+                            <div class="kpi-icon" style="background: var(--primary-light); color: var(--primary);"><i class="fa-solid fa-calendar-day"></i></div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div>
+                                <div style="color: var(--text-muted); font-size: 13px;">المرضى الجدد</div>
+                                <div class="kpi-val">23 مريضاً</div>
+                                <div style="color: var(--success); font-size: 12px; margin-top: 4px;">+15% هذا الأسبوع</div>
+                            </div>
+                            <div class="kpi-icon" style="background: var(--cyan-light); color: var(--navy);"><i class="fa-solid fa-user-plus"></i></div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div>
+                                <div style="color: var(--text-muted); font-size: 13px;">إجمالي المرضى</div>
+                                <div class="kpi-val">2,350</div>
+                                <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">سجلات موثقة</div>
+                            </div>
+                            <div class="kpi-icon" style="background: #fef3c7; color: #b45309;"><i class="fa-solid fa-users"></i></div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div>
+                                <div style="color: var(--text-muted); font-size: 13px;">إجمالي الإيرادات</div>
+                                <div class="kpi-val">125,430 ج.م</div>
+                                <div style="color: var(--success); font-size: 12px; margin-top: 4px;">+12% عن الشهر الماضي</div>
+                            </div>
+                            <div class="kpi-icon" style="background: var(--success-light); color: var(--success);"><i class="fa-solid fa-money-bill-wave"></i></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                        <div class="table-card" style="padding: 24px;">
+                            <h4 style="margin-bottom: 20px; color: var(--navy);">حركة الإيرادات والزيارات (آخر 7 أيام)</h4>
+                            <canvas id="revenueChart" height="150"></canvas>
+                        </div>
+
+                        <div class="table-card" style="padding: 24px;">
+                            <h4 style="margin-bottom: 20px; color: var(--navy);">توزيع الإيرادات حسب التخصص</h4>
+                            <canvas id="deptChart" height="210"></canvas>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- MODULE 07: DIGITAL TV QUEUE DISPLAY                  -->
+        <!-- ==================================================== -->
+        <div id="mod-tvqueue" class="view-module">
+            <div class="tv-queue-wrapper">
+                <div class="tv-header">
+                    <div class="brand-logo" style="color: #ffffff;">
+                        <div class="logo-box" style="background: var(--cyan); color: var(--navy-dark);"><i class="fa-solid fa-stethoscope"></i></div>
+                        برج بلازما الطبي - شاشة انتظار العيادات
+                    </div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--cyan);" id="tvClock">10:42 AM</div>
+                </div>
+
+                <div class="now-serving-box">
+                    <div style="font-size: 24px; letter-spacing: 4px; color: var(--cyan); font-weight: 900; margin-bottom: 12px;"><i class="fa-solid fa-bullhorn"></i> التذكرة الحالية - NOW SERVING</div>
+                    <div class="now-serving-number" id="tvTicketNum">A105</div>
+                    <div style="font-size: 36px; font-weight: 900; margin-bottom: 8px;">السيد / محمد أحمد سعيد</div>
+                    <div style="font-size: 26px; color: var(--cyan); font-weight: 800;">د. أحمد حسن - عيادة جراحة العظام (غرفة 4)</div>
+                    <p style="font-size: 17px; opacity: 0.85; margin-top: 24px;">يرجى التوجه إلى العيادة عند سماع النداء الصوتي. نتمنى لكم دوام الصحة والعافية.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-brand-title">
+                    <div class="logo-box" style="width: 34px; height: 34px; font-size: 18px;"><i class="fa-solid fa-stethoscope"></i></div>
+                    برج بلازما الطبي - الحوامدية
+                </div>
+                <p style="line-height: 1.85; font-size: 14px; max-width: 380px;">الحوامدية – برج بلازما الطبي - بجوار بنك الإسكندرية - أمام مرور الحوامدية.<br>الهواتف: 01021869999 / 01035719999 / 0238120999</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div>© 2026 برج بلازما الطبي بالحوامدية. جميع الحقوق محفوظة.</div>
+            <div>Plasma Medical Tower OS</div>
+        </div>
+    </footer>
+
+    <!-- JARSCRIPT & CHARTS -->
+    <script>
+        let currentLang = 'ar';
+
+        function switchModule(moduleId, btnElement) {
+            document.querySelectorAll('.view-module').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.module-btn').forEach(b => b.classList.remove('active'));
+            const targetMod = document.getElementById(moduleId);
+            if(targetMod) targetMod.classList.add('active');
+            if(btnElement) btnElement.classList.add('active');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+
+            if(moduleId === 'mod-admin') setTimeout(renderCharts, 100);
+        }
+
+        function toggleLanguage() {
+            currentLang = (currentLang === 'ar') ? 'en' : 'ar';
+            const htmlTag = document.getElementById('htmlTag');
+            htmlTag.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            document.body.className = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lblLangTop').innerText = currentLang === 'ar' ? 'English' : 'العربية';
+        }
+
+        function handleStaffLogin() {
+            const role = document.getElementById('loginRole').value;
+            if(role === 'admin') switchModule('mod-admin', document.querySelectorAll('.module-btn')[4]);
+            else if(role === 'doctor') switchModule('mod-doctor', document.querySelectorAll('.module-btn')[7]);
+            else if(role === 'reception') switchModule('mod-reception', document.querySelectorAll('.module-btn')[5]);
+            else alert('تم تسجيل الدخول بنجاح لحساب الموظف (' + role + ')');
+        }
+
+        function confirmBooking() {
+            alert('تم تأكيد موعدك بنجاح ببرج بلازما الطبي بالحوامدية! تم إرسال التذكرة ورمز QR إلى الواتساب.');
+        }
+
+        function scrollToSpecialties() {
+            document.getElementById('specialties').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        let chartRendered = false;
+        function renderCharts() {
+            if(chartRendered) return;
+            chartRendered = true;
+
+            const ctxRev = document.getElementById('revenueChart');
+            if(ctxRev) {
+                new Chart(ctxRev, {
+                    type: 'line',
+                    data: {
+                        labels: ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
+                        datasets: [{
+                            label: 'الإيرادات (ج.م)',
+                            data: [10000, 15000, 22000, 18000, 26000, 24000, 19000],
+                            borderColor: '#138A9E',
+                            backgroundColor: 'rgba(19, 138, 158, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } } }
+                });
+            }
+
+            const ctxDept = document.getElementById('deptChart');
+            if(ctxDept) {
+                new Chart(ctxDept, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['الباطنة', 'الأسنان', 'الأطفال', 'الجلدية', 'العظام'],
+                        datasets: [{
+                            data: [25, 20, 15, 15, 10],
+                            backgroundColor: ['#063B4A', '#138A9E', '#20C4D9', '#F59E0B', '#10B981']
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
