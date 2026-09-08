@@ -78,7 +78,14 @@ export default function Home() {
     {screen === 'erp' && <ERP session={session} onBack={() => setScreen('home')} onNotice={toast} />}
     {bookingOpen && <BookingWizard step={bookingStep} setStep={setBookingStep} data={booking} setData={setBooking} onClose={() => setBookingOpen(false)} />}
     {notice && <div className="notice"><Check />{notice}</div>}
+    {screen === 'home' && <ExperienceDock onBook={openBooking} onLogin={() => setScreen(session ? 'erp' : 'login')} />}
   </main>;
+}
+
+function ExperienceDock({ onBook, onLogin }: { onBook: () => void; onLogin: () => void }) {
+  const [open, setOpen] = useState(false);
+  const goTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  return <div className={`experience-dock ${open ? 'open' : ''}`} aria-label="إجراءات سريعة"><div className="dock-panel"><span>محتاج مساعدة؟</span><button onClick={onBook}><CalendarDays /> حجز كشف</button><a href="https://wa.me/201021869999" target="_blank" rel="noreferrer"><MessageCircle /> واتساب</a><button onClick={onLogin}><ShieldCheck /> فريق العمل</button></div><div className="dock-actions"><button className="dock-top" onClick={goTop} aria-label="العودة للأعلى"><ArrowRight /></button><button className="dock-main" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="فتح الإجراءات السريعة">{open ? <X /> : <Sparkles />}</button></div></div>;
 }
 
 function PublicSite({ onBook, onLogin }: { onBook: (specialty?: string, doctor?: string) => void; onLogin: () => void }) {
@@ -146,6 +153,7 @@ function ERP({ session, onBack, onNotice }: { session: Session | null; onBack: (
   const [active, setActive] = useState('نظرة عامة'); const [appointments, setAppointments] = useState<Array<Record<string, string>>>([]); const [role, setRole] = useState('reception');
   const loadAppointments = async (announce = false) => { if (!session || !supabase) return; const { data, error } = await supabase.from('pmt_appointments').select('*').order('created_at', { ascending: false }).limit(6); if (error) { onNotice('تعذر تحديث الحجوزات'); return; } setAppointments((data || []) as Array<Record<string, string>>); if (announce) onNotice('تم تحديث الحجوزات من قاعدة البيانات'); };
   useEffect(() => { loadAppointments(); if (session && supabase) supabase.from('pmt_profiles').select('role').eq('id', session.user.id).maybeSingle().then(({ data }) => data?.role && setRole(data.role)); }, [session]);
+  useEffect(() => { const openReception = (event: MouseEvent) => { const button = (event.target as HTMLElement).closest('button'); if (button?.textContent?.includes('مريض جديد')) { setActive('المرضى'); onNotice('افتح نموذج تسجيل وحجز المريض من قسم المرضى'); } }; document.addEventListener('click', openReception); return () => document.removeEventListener('click', openReception); }, []);
   if (!session) return <div className="session-missing"><ShieldCheck /><h2>مطلوب تسجيل الدخول</h2><p>الجلسة غير موجودة أو انتهت.</p><Button onClick={onBack}>العودة للموقع</Button></div>;
   const signOut = async () => { await supabase?.auth.signOut(); onBack(); };
   const nav = [['نظرة عامة',LayoutDashboard],['المرضى',Users],['المواعيد',CalendarDays],['الفروع',MapPin],['السجل الطبي',FileHeart],['المعمل',FlaskConical],['الأشعة',Radio],['الفواتير',WalletCards],['المخزون',Package],['الإعدادات',Settings]] as const;
