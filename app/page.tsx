@@ -78,14 +78,7 @@ export default function Home() {
     {screen === 'erp' && <ERP session={session} onBack={() => setScreen('home')} onNotice={toast} />}
     {bookingOpen && <BookingWizard step={bookingStep} setStep={setBookingStep} data={booking} setData={setBooking} onClose={() => setBookingOpen(false)} />}
     {notice && <div className="notice"><Check />{notice}</div>}
-    {screen === 'home' && <ExperienceDock onBook={openBooking} onLogin={() => setScreen(session ? 'erp' : 'login')} />}
   </main>;
-}
-
-function ExperienceDock({ onBook, onLogin }: { onBook: () => void; onLogin: () => void }) {
-  const [open, setOpen] = useState(false);
-  const goTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  return <div className={`experience-dock ${open ? 'open' : ''}`} aria-label="إجراءات سريعة"><div className="dock-panel"><span>محتاج مساعدة؟</span><button onClick={onBook}><CalendarDays /> حجز كشف</button><a href="https://wa.me/201021869999" target="_blank" rel="noreferrer"><MessageCircle /> واتساب</a><button onClick={onLogin}><ShieldCheck /> فريق العمل</button></div><div className="dock-actions"><button className="dock-top" onClick={goTop} aria-label="العودة للأعلى"><ArrowRight /></button><button className="dock-main" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="فتح الإجراءات السريعة">{open ? <X /> : <Sparkles />}</button></div></div>;
 }
 
 function PublicSite({ onBook, onLogin }: { onBook: (specialty?: string, doctor?: string) => void; onLogin: () => void }) {
