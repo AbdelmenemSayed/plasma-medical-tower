@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
+import { Cairo } from 'next/font/google';
 import './globals.css';
+
+const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo' });
 
 export const metadata: Metadata = {
   title: 'برج بلازما الطبي | رعاية متكاملة',
-  description: 'منصة برج بلازما الطبي للحجز وإدارة الرعاية الصحية في الحوامدية.',
+  description: 'احجز كشفك في برج بلازما الطبي بالحوامدية. عيادات متخصصة، معامل، أشعة، ومتابعة طبية متكاملة.',
 };
 
 export default function RootLayout({
@@ -13,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body>{children}</body>
+      <body className={cairo.variable}>{children}</body>
     </html>
   );
 }
