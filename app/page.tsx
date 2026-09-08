@@ -55,6 +55,17 @@ export default function Home() {
     return () => listener?.data.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const target = (event.target as HTMLElement).closest('button, a');
+      if (!target || target.classList.contains('modal-backdrop')) return;
+      target.classList.remove('interaction-pulse');
+      window.requestAnimationFrame(() => target.classList.add('interaction-pulse'));
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, []);
+
   const openBooking = (specialty?: string, doctor?: string) => {
     setBooking((old) => ({ ...old, specialty: specialty || old.specialty, doctor: doctor || old.doctor }));
     setBookingStep(specialty ? 2 : 1); setBookingOpen(true);
