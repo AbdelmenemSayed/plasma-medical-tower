@@ -38,7 +38,7 @@ const insuranceCompanies = ['مصر للتأمين', 'ثروة كير', 'أكس�
 const initialBooking: BookingData = { specialty: 'القلب والأوعية الدموية', doctor: 'د. أحمد عادل', date: '2026-09-09', time: '٧:٣٠ م', name: '', phone: '', visitType: 'كشف جديد', notes: '', insurance: 'no', insuranceCompany: '', patientAddress: '', homeVisit: false };
 
 function Brand({ light = false, compact = false }: { light?: boolean; compact?: boolean }) {
-  return <div className={`brand ${light ? 'light' : ''}`}><span className="brand-symbol"><Activity /><i>+</i></span>{!compact && <span className="brand-words"><b>برج بلازما الطبي</b><small>PLASMA MEDICAL TOWER</small></span>}</div>;
+  return <div className={`brand ${light ? 'light' : ''} ${compact ? 'compact' : ''}`}><img className="brand-logo" src="/pmt-logo.jpeg" alt="برج بلازما الطبي - الحوامدية" /></div>;
 }
 
 export default function Home() {
