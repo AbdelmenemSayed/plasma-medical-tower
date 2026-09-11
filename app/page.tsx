@@ -8,7 +8,7 @@ import {
   HeartPulse, Hospital, LayoutDashboard, LoaderCircle, LogOut, MapPin, Menu, MessageCircle,
   Navigation, Package, Phone, Plus, QrCode, Radio, Search, Settings, ShieldCheck,
   Sparkles, Stethoscope, TestTube2, Users, WalletCards, X, Building2, UserCheck, CheckCircle2,
-  HardHat, AlertCircle
+  HardHat, AlertCircle, Brain, Scissors, Baby, Droplet, Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,26 +22,75 @@ import { OmniSearchBar } from '@/components/OmniSearchBar';
 import { NotificationDrawer, type NotificationItem } from '@/components/NotificationDrawer';
 import { AttendanceSection } from '@/components/AttendanceSection';
 import { InteractiveFlowChart } from '@/components/InteractiveFlowChart';
+import { MedicalCampaignsCarousel } from '@/components/MedicalCampaignsCarousel';
 
 type Screen = 'home' | 'login' | 'erp';
 type BookingData = { specialty: string; doctor: string; date: string; time: string; name: string; phone: string; visitType: string; notes: string; insurance: 'yes' | 'no'; insuranceCompany: string; patientAddress: string; homeVisit: boolean; branchId: string; branchName: string };
 
 const clinics = [
-  { name: 'القلب والأوعية الدموية', meta: 'قسطرة · إيكو · متابعة ضغط', icon: HeartPulse, doctors: '٥ أطباء' },
-  { name: 'العظام والمفاصل', meta: 'إصابات ملاعب · عمود فقري', icon: Activity, doctors: '٤ أطباء' },
-  { name: 'طب الأطفال', meta: 'حديثو الولادة · متابعة نمو', icon: Hospital, doctors: '٦ أطباء' },
-  { name: 'الباطنة والسكر', meta: 'سكر · غدد · جهاز هضمي', icon: Stethoscope, doctors: '٧ أطباء' },
-  { name: 'النساء والتوليد', meta: 'متابعة حمل · صحة المرأة', icon: Users, doctors: '٥ أطباء' },
-  { name: 'الأسنان', meta: 'تركيبات · زراعة · أطفال', icon: BadgeCheck, doctors: '٦ أطباء' },
-  { name: 'الأشعة التشخيصية', meta: 'رنين · مقطعية · سونار', icon: Radio, doctors: '٣ أطباء' },
-  { name: 'التحاليل الطبية', meta: 'سحب منزلي · نتائج رقمية', icon: FlaskConical, doctors: 'يوميًا' },
+  { name: 'أمراض الباطنة والسكر والسمنة والجهاز الهضمي', meta: 'سونار باطنة · ضبط سكر وتغذية · مناظير جهاز هضمي', icon: Stethoscope, doctors: 'د. حسين الشوري واستشاريون' },
+  { name: 'المخ والأعصاب وجراحة العمود الفقري', meta: 'جراحة المخ والأعصاب · العمود الفقري · تأخر الحركة عند الأطفال', icon: Brain, doctors: 'د/ خالد مأمون مؤنس (قصر العيني)' },
+  { name: 'جراحة عامة وجراحة أوعية دموية', meta: 'دوالي الساقين بالحقن والليزر · قسطرة الأوعية · جراحات عامة', icon: Activity, doctors: 'د. عادل عبد المنعم يونس' },
+  { name: 'مسالك بولية وأمراض ذكورة وعقم', meta: 'تفتيت حصوات · مناظير مسالك · علاج العقم والذكورة', icon: FlaskConical, doctors: '٣ استشاريين' },
+  { name: 'أخصائي أمراض القلب والأوعية الدموية', meta: 'قسطرة قلبية · إيكو ورسم قلب · متابعة ضغط الدم', icon: HeartPulse, doctors: 'د. أحمد عادل' },
+  { name: 'أمراض الدم', meta: 'تشخيص الأنيميا · اعتلالات التجلط والصفائح · أمراض الدم المناعية', icon: Droplet, doctors: 'استشاريو أمراض الدم' },
+  { name: 'جراحة عامة ومناظير وجراحة أورام الثدي', meta: 'استئصال الأورام · جراحات المناظير الدقيقة · المسح المبكر', icon: Scissors, doctors: 'وحدة جراحة الأورام' },
+  { name: 'غدد صماء وسكر الأطفال', meta: 'سكر الأطفال واليافعين · قصر القامة وتأخر النمو · الغدد', icon: Baby, doctors: 'د. سارة فتحي واستشاريون' },
+  { name: 'السمنة والنحافة', meta: 'تغذية علاجية متخصصة · إنقاص وزيادة الوزن · فحص InBody', icon: Scale, doctors: 'أخصائيو السمنة والتغذية' },
+  { name: 'نساء وتوليد', meta: 'متابعة الحمل الحرج · سونار 4D · ولادة بدون ألم ورعاية المرأة', icon: Users, doctors: '٤ استشاريات' },
+  { name: 'مخ وأعصاب وفسيولوجيا الأعصاب الإكلينيكية', meta: 'رسم المخ (EEG) · رسم العضلات وسرعة الأعصاب (EMG)', icon: Brain, doctors: 'وحدة الفسيولوجيا العصبية' },
+  { name: 'جراحة المسالك البولية والتناسلية', meta: 'جراحات البروستاتا بالتبخير · إصلاح مجرى البول والتشوهات', icon: Hospital, doctors: 'نخبة جراحي المسالك' },
+  { name: 'الأشعة التشخيصية والسونار', meta: 'رنين مغناطيسي · أشعة مقطعية · دوبلر وسونار متقدم', icon: Radio, doctors: 'فريق استشاريي الأشعة' },
+  { name: 'التحاليل الطبية والمعامل', meta: 'سحب منزلي مجاني · نتائج فورية رقمية · فحص هرمونات وشامل', icon: TestTube2, doctors: 'معمل بلازما المعتمد' },
+  { name: 'طب وجراحة الأسنان', meta: 'زراعة وتجميل الأسنان · هوليوود سمايل · تقويم وعلاج جذور', icon: BadgeCheck, doctors: 'عيادات الأسنان المتكاملة' },
 ];
 
 const doctorsList = [
-  { name: 'د. أحمد عادل', title: 'استشاري القلب والقسطرة', degree: 'قصر العيني', next: 'اليوم · ٧:٣٠ م', initials: 'أع', accent: 'mint', specialty: 'القلب والأوعية الدموية' },
-  { name: 'د. سارة فتحي', title: 'استشاري الأطفال وحديثي الولادة', degree: 'جامعة القاهرة', next: 'غدًا · ٤:٠٠ م', initials: 'سف', accent: 'sand', specialty: 'طب الأطفال' },
-  { name: 'د. محمد الشاذلي', title: 'استشاري جراحة العظام', degree: 'جامعة عين شمس', next: 'اليوم · ٨:٠٠ م', initials: 'مش', accent: 'blue', specialty: 'العظام والمفاصل' },
-  { name: 'د. إبراهيم فؤاد', title: 'استشاري الباطنة والسكر', degree: 'جامعة القاهرة', next: 'اليوم · ٦:٠٠ م', initials: 'إف', accent: 'mint', specialty: 'الباطنة والسكر' },
+  {
+    name: 'د/ خالد مأمون مؤنس',
+    title: 'مدرس واستشاري جراحة المخ والأعصاب وجراحة العمود الفقري',
+    degree: 'كلية طب قصر العيني — جامعة القاهرة',
+    next: 'اليوم · ٦:٣٠ م',
+    initials: 'خم',
+    accent: 'blue',
+    specialty: 'المخ والأعصاب وجراحة العمود الفقري'
+  },
+  {
+    name: 'دكتور حسين الشوري',
+    title: 'استشاري الأمراض الباطنية والسكر والسمنة والجهاز الهضمي',
+    degree: 'كشف بالسونار ومتابعة سكر دقيقة بخطة متكاملة',
+    next: 'اليوم · ٧:٠٠ م',
+    initials: 'حش',
+    accent: 'mint',
+    specialty: 'أمراض الباطنة والسكر والسمنة والجهاز الهضمي'
+  },
+  {
+    name: 'دكتور عادل عبد المنعم يونس',
+    title: 'استشاري الجراحة العامة وجراحة الأوعية الدموية',
+    degree: 'علاج دوالي الساقين بالحقن والليزر من غير جراحة',
+    next: 'غداً · ٥:٠٠ م',
+    initials: 'عي',
+    accent: 'sand',
+    specialty: 'جراحة عامة وجراحة أوعية دموية'
+  },
+  {
+    name: 'د. أحمد عادل',
+    title: 'استشاري القلب والقسطرة التداخلية',
+    degree: 'قصر العيني',
+    next: 'اليوم · ٧:٣٠ م',
+    initials: 'أع',
+    accent: 'mint',
+    specialty: 'أخصائي أمراض القلب والأوعية الدموية'
+  },
+  {
+    name: 'د. سارة فتحي',
+    title: 'استشاري طب الأطفال وغدد صماء وسكر الأطفال',
+    degree: 'جامعة القاهرة',
+    next: 'غدًا · ٤:٠٠ م',
+    initials: 'سف',
+    accent: 'sand',
+    specialty: 'غدد صماء وسكر الأطفال'
+  },
 ];
 
 const insuranceCompanies = ['مصر للتأمين', 'ثروة كير', 'أكسا مصر', 'متلايف', 'بوبا مصر', 'جي أي جي (GIG)'];
@@ -282,8 +331,9 @@ function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string
         <Brand />
         <nav className={menuOpen ? 'open' : ''}>
           <button onClick={() => scrollTo('home')}>الرئيسية</button>
+          <button onClick={() => scrollTo('campaigns')}>استشارات النخبة</button>
           <button onClick={() => scrollTo('branches')}>الفروع (٦)</button>
-          <button onClick={() => scrollTo('clinics')}>العيادات</button>
+          <button onClick={() => scrollTo('clinics')}>العيادات والتخصصات</button>
           <button onClick={() => scrollTo('doctors')}>الأطباء</button>
           <button onClick={() => scrollTo('services')}>الخدمات</button>
           <button onClick={() => scrollTo('contact')}>الموقع والتواصل</button>
@@ -395,6 +445,11 @@ function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string
           <ArrowLeft />
         </a>
       </section>
+
+      {/* Medical Campaigns & Elite Consultant Carousel */}
+      <div id="campaigns">
+        <MedicalCampaignsCarousel onBook={onBook} />
+      </div>
 
       {/* Branches Showcase Section */}
       <section className="content-section bg-gray-50/50" id="branches">
@@ -694,8 +749,8 @@ function BookingWizard({ step, setStep, data, setData, onClose }: { step: number
               )}
 
               <p className="step-hint">اختار التخصص المطلوب</p>
-              <div className="booking-options">
-                {clinics.slice(0, 6).map(({ name, icon: Icon }) => (
+              <div className="booking-options max-h-72 overflow-y-auto pr-1">
+                {clinics.map(({ name, icon: Icon }) => (
                   <button
                     key={name}
                     type="button"
