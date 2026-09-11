@@ -167,6 +167,15 @@ export default function Home() {
   useEffect(() => {
     supabase?.auth.getSession().then(({ data }) => setSession(data.session));
     const listener = supabase?.auth.onAuthStateChange((_event, next) => setSession(next));
+
+    // Support direct ERP query param: ?erp or ?screen=erp
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('screen') === 'erp' || params.has('erp') || params.get('view') === 'erp') {
+        setScreen('erp');
+      }
+    }
+
     return () => listener?.data.subscription.unsubscribe();
   }, []);
 
@@ -186,7 +195,7 @@ export default function Home() {
       {screen === 'home' && (
         <PublicSite
           onBook={openBooking}
-          onLogin={() => setScreen(session ? 'erp' : 'login')}
+          onLogin={() => setScreen('erp')}
           branches={initialBranches}
         />
       )}
@@ -242,6 +251,23 @@ function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string
 
   return (
     <>
+      {/* Direct ERP Access Announcement Top Banner */}
+      <div className="bg-gradient-to-r from-teal-950 via-teal-900 to-teal-950 text-white px-4 py-2.5 flex items-center justify-between text-xs border-b border-teal-700/60 shadow-md flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="font-bold">نظام الإدارة السريرية والـ ERP لبرج بلازما الطبي:</span>
+          <span className="text-teal-200 hidden md:inline">لوحة التحكم، البحث الشامل، التنبيهات، الغياب والأوفر تايم، الفروع الستة، والعيادات.</span>
+        </div>
+        <button
+          onClick={onLogin}
+          className="bg-emerald-500 hover:bg-emerald-400 text-teal-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-transform active:scale-95 shadow cursor-pointer"
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          دخول لوحة التحكم والـ ERP فوراً
+          <ArrowLeft className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       <div className="utility-bar">
         <div>
           <span><MapPin /> فروعنا: الحوامدية، البدرشين، طموه، العياط · وقريباً 6 أكتوبر والمعادي</span>
@@ -263,9 +289,9 @@ function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string
           <button onClick={() => scrollTo('contact')}>الموقع والتواصل</button>
         </nav>
         <div className="main-actions">
-          <button className="staff-link font-bold text-teal-800" onClick={onLogin}>
-            <ShieldCheck className="w-4 h-4 text-teal-700" />
-            بوابة الإدارة والفريق الطبي
+          <button className="staff-link font-bold text-teal-800 flex items-center gap-1.5 bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200 hover:bg-teal-100" onClick={onLogin}>
+            <LayoutDashboard className="w-4 h-4 text-teal-700" />
+            لوحة تحكم المنظومة (ERP)
           </button>
           <Button onClick={() => onBook()}>احجز كشف</Button>
           <button className="mobile-menu" aria-label="القائمة" onClick={() => setMenuOpen(!menuOpen)}>
@@ -285,8 +311,12 @@ function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string
           <p>
             سواء كنت كشفاً حراً أو تابعاً لإحدى كبرى شركات التأمين، أطباؤنا متاحون لخدمتك في ٤ فروع عاملة مع خطة توسع متقدمة بفرعين جديدين.
           </p>
-          <div className="hero-cta">
+          <div className="hero-cta flex flex-wrap gap-3 items-center">
             <Button size="lg" onClick={() => onBook()}>احجز موعدك الآن <ArrowLeft /></Button>
+            <Button size="lg" variant="outline" onClick={onLogin} className="border-teal-700 text-teal-900 bg-white hover:bg-teal-50 font-bold">
+              <LayoutDashboard className="w-4 h-4 ml-1 text-teal-700" />
+              لوحة التحكم والـ ERP (مباشر)
+            </Button>
             <a className="whatsapp-btn" href="https://wa.me/201021869999" target="_blank" rel="noreferrer">
               <MessageCircle /> كلمنا واتساب
             </a>
@@ -521,8 +551,8 @@ function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string
           <a href="tel:01021869999">الطوارئ والاستفسار: 01021869999</a>
           <span>© ٢٠٢٦ برج بلازما الطبي — منظومة الرعاية الطبية والإدارية الموحدة</span>
         </div>
-        <button onClick={onLogin} className="flex items-center gap-1 text-teal-300 font-bold">
-          بوابة الإدارة وفريق العمل <ArrowLeft className="w-4 h-4" />
+        <button onClick={onLogin} className="flex items-center gap-1.5 text-teal-200 font-bold bg-teal-900/80 hover:bg-teal-800 px-3.5 py-1.5 rounded-lg border border-teal-700/60 transition-colors shadow-sm">
+          لوحة تحكم المنظومة (ERP) <ArrowLeft className="w-4 h-4" />
         </button>
       </footer>
     </>
