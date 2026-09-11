@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import {
   Activity, ArrowLeft, ArrowRight, BadgeCheck, Bell, CalendarDays, Check,
-  CircleDollarSign, Clock3, ExternalLink, Eye, EyeOff, FileHeart, FlaskConical,
+  CircleDollarSign, Clock, Clock3, ExternalLink, Eye, EyeOff, FileHeart, FlaskConical,
   HeartPulse, Hospital, LayoutDashboard, LoaderCircle, LogOut, MapPin, Menu, MessageCircle,
   Navigation, Package, Phone, Plus, QrCode, Radio, Search, Settings, ShieldCheck,
   Sparkles, Stethoscope, TestTube2, Users, WalletCards, X, Building2, UserCheck, CheckCircle2,
@@ -18,6 +18,10 @@ import { RolePersonaSwitcher, defaultPersonas, type Persona } from '@/components
 import { DoctorWorkspace, type DoctorAppointmentItem } from '@/components/DoctorWorkspace';
 import { PatientHistoryModal, type MedicalRecordItem, type PatientData } from '@/components/PatientHistoryModal';
 import { ReceptionBookingModal } from '@/components/ReceptionBookingModal';
+import { OmniSearchBar } from '@/components/OmniSearchBar';
+import { NotificationDrawer, type NotificationItem } from '@/components/NotificationDrawer';
+import { AttendanceSection } from '@/components/AttendanceSection';
+import { InteractiveFlowChart } from '@/components/InteractiveFlowChart';
 
 type Screen = 'home' | 'login' | 'erp';
 type BookingData = { specialty: string; doctor: string; date: string; time: string; name: string; phone: string; visitType: string; notes: string; insurance: 'yes' | 'no'; insuranceCompany: string; patientAddress: string; homeVisit: boolean; branchId: string; branchName: string };
@@ -965,9 +969,107 @@ function ERP({
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecordItem[]>(initialMedicalRecords);
   const [branches, setBranches] = useState(initialBranches);
 
-  // Modals
+  // Modals & Navigation Drawers
   const [receptionModalOpen, setReceptionModalOpen] = useState(false);
   const [selectedPatientForHistory, setSelectedPatientForHistory] = useState<PatientData | null>(null);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+
+  // Quick Attendance (Clock In/Out) State
+  const [isClockedIn, setIsClockedIn] = useState(false);
+  const [clockInTime, setClockInTime] = useState<string | null>(null);
+
+  // Real-time Digital Clock (Updates every second)
+  const [currentTime, setCurrentTime] = useState<string>('');
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString('ar-EG', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        })
+      );
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<NotificationItem[]>([
+    {
+      id: 'notif-1',
+      type: 'appointment',
+      title: 'حالة جديدة في الاستقبال',
+      message: 'سجلت أستاذة منّة وصول المريض أحمد محمد السيد لعيادة القلب (كشف حر).',
+      time: 'منذ ٥ د',
+      isRead: false,
+      actionTab: 'المواعيد والاستقبال'
+    },
+    {
+      id: 'notif-2',
+      type: 'doctor_done',
+      title: 'اكتمال فحص حالة د. أحمد عادل',
+      message: 'أنهى د. أحمد عادل تشخيص المريض محمود خليل وحفظ الروشتة في السجل الطبي.',
+      time: 'منذ ١٢ د',
+      isRead: false,
+      actionTab: 'السجل الطبي'
+    },
+    {
+      id: 'notif-3',
+      type: 'lab_ready',
+      title: 'نتائج تحاليل معملية جاهزة',
+      message: 'تم اعتماد نتائج صورة الدم الكاملة CBC للمريضة منى عبد الرحمن من معمل الحوامدية.',
+      time: 'منذ ٢٥ د',
+      isRead: true,
+      actionTab: 'المعمل'
+    },
+    {
+      id: 'notif-4',
+      type: 'system',
+      title: 'تقرير حضور الفروع الصباحي',
+      message: 'اكتمل تسجيل بصمات الحضور في فرعي الحوامدية والبدرشين بنسبة ٩٤٪.',
+      time: 'منذ ٤٥ د',
+      isRead: true,
+      actionTab: 'الغياب والحضور'
+    }
+  ]);
+
+  // Handle Quick Attendance Toggle
+  const handleToggleClockIn = () => {
+    const timeStr = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (!isClockedIn) {
+      setIsClockedIn(true);
+      setClockInTime(timeStr);
+      onNotice(`تم تسجيل بصمة حضور ${activePersona.name} الساعة ${timeStr} بنجاح ✅`);
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        type: 'system',
+        title: 'تسجيل بصمة حضور',
+        message: `سجل ${activePersona.name} (${activePersona.title}) حضوراً إلكترونياً الساعة ${timeStr}.`,
+        time: 'الآن',
+        isRead: false,
+        actionTab: 'الغياب والحضور'
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    } else {
+      setIsClockedIn(false);
+      onNotice(`تم تسجيل بصمة انصراف ${activePersona.name} الساعة ${timeStr}`);
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        type: 'system',
+        title: 'تسجيل بصمة انصراف',
+        message: `سجل ${activePersona.name} (${activePersona.title}) انصرافاً إلكترونياً الساعة ${timeStr}.`,
+        time: 'الآن',
+        isRead: false,
+        actionTab: 'الغياب والحضور'
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    }
+  };
 
   // New staff form state
   const [newStaff, setNewStaff] = useState({ name: '', email: '', phone: '', role: 'doctor', branchId: 'b-hawamdia', specialty: 'القلب والأوعية الدموية' });
@@ -1035,6 +1137,19 @@ function ERP({
         prev.map((app) => (app.id === appointmentId ? { ...app, status: 'completed' } : app))
       );
     }
+
+    // Trigger alarm/notification for reception and doctor workspace
+    const doctorFinishedNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      type: 'doctor_done',
+      title: `انتهاء كشف: ${newRecord.patient_name}`,
+      message: `أنهى الطبيب فحص وتشخيص ${newRecord.patient_name} بعيادة ${newRecord.specialty_ar}. تم حفظ الروشتة وجاهز لاستدعاء الحالة التالية.`,
+      time: 'الآن',
+      isRead: false,
+      actionTab: 'المواعيد والاستقبال'
+    };
+    setNotifications((prev) => [doctorFinishedNotif, ...prev]);
+    onNotice(`تم حفظ التشخيص والروشتة بنجاح، وإرسال تنبيه فوري للاستقبال لاستدعاء الحالة التالية! 🔔`);
 
     if (supabase) {
       await supabase.from('pmt_medical_records').insert(newRecord);
@@ -1108,6 +1223,7 @@ function ERP({
     ['عيادة الطبيب', Stethoscope],
     ['المرضى', Users],
     ['المواعيد والاستقبال', CalendarDays],
+    ['الغياب والحضور', Clock],
     ['الفروع (٦)', Building2],
     ['السجل الطبي', FileHeart],
     ['المعمل', FlaskConical],
@@ -1163,13 +1279,57 @@ function ERP({
           </div>
 
           <div className="flex items-center gap-2">
-            <button aria-label="البحث" onClick={() => onNotice('البحث السريع: اكتب اسم المريض أو رقم الهاتف أو كود الحجز')}>
+            {/* Quick Clock-in/out button */}
+            <button
+              onClick={handleToggleClockIn}
+              className={`clock-in-btn ${isClockedIn ? 'clocked-in' : ''}`}
+              title={isClockedIn ? `أنت مسجل حضور (${clockInTime}) - اضغط للبصمة والانصراف` : 'اضغط لتسجيل بصمة الحضور الآن'}
+            >
+              <Clock className="w-3.5 h-3.5 ml-1" />
+              <span>{isClockedIn ? `حضور (${clockInTime})` : 'تسجيل حضور'}</span>
+            </button>
+
+            {/* Omnibar Search Button */}
+            <button
+              aria-label="البحث الشامل"
+              onClick={() => setSearchModalOpen(true)}
+              title="البحث الشامل في النظام (Ctrl+K)"
+            >
               <Search />
             </button>
-            <button aria-label="التنبيهات" onClick={() => onNotice('تنبيه: ٤ حالات بانتظار الكشف، و١١ نتيجة معمل جاهزة')}>
-              <Bell />
-              <i>4</i>
-            </button>
+
+            {/* Notifications Dropdown */}
+            <div className="relative">
+              <button
+                aria-label="التنبيهات"
+                onClick={() => setNotificationDrawerOpen(!notificationDrawerOpen)}
+                title="مركز التنبيهات والإشعارات"
+              >
+                <Bell />
+                {notifications.filter((n) => !n.isRead).length > 0 && (
+                  <i>{notifications.filter((n) => !n.isRead).length}</i>
+                )}
+              </button>
+
+              <NotificationDrawer
+                isOpen={notificationDrawerOpen}
+                onClose={() => setNotificationDrawerOpen(false)}
+                notifications={notifications}
+                onMarkAllRead={() => {
+                  setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+                  onNotice('تم تحديد جميع التنبيهات كمقروءة');
+                }}
+                onClear={() => {
+                  setNotifications([]);
+                  onNotice('تم مسح جميع التنبيهات');
+                }}
+                onNavigate={(tab) => {
+                  setActiveTab(tab);
+                  onNotice(`تم الانتقال إلى: ${tab}`);
+                }}
+              />
+            </div>
+
             <Button
               onClick={() => setReceptionModalOpen(true)}
               className="bg-teal-700 hover:bg-teal-800 text-white font-bold"
@@ -1188,10 +1348,13 @@ function ERP({
             <>
               <div className="ops-welcome">
                 <div>
-                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
-                    <span className="open-dot" /> النظام متصل والعيادات نشطة
-                  </Badge>
-                  <h2>أهلاً بك يا {activePersona.name.split(' ')[0]}</h2>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
+                      <span className="open-dot" /> النظام متصل والعيادات نشطة
+                    </Badge>
+                    <span className="text-xs text-gray-500 font-medium">الوردية الصباحية · ٦ فروع متزامنة</span>
+                  </div>
+                  <h2>{new Date().getHours() < 12 ? 'صباح الخير' : 'مساء الخير'}، {activePersona.name}</h2>
                   <p>
                     {activePersona.role === 'admin'
                       ? 'أنت تعمل بصلاحية المدير العام: إشراف كامل على الفروع الستة ومتابعة التقارير الموحدة.'
@@ -1202,9 +1365,13 @@ function ERP({
                       : 'أنت في بوابة الاستقبال: سجّل المرضى، حدد كشف حر أو تأمين، ووجّه المريض للعيادة.'}
                   </p>
                 </div>
-                <div className="ops-time">
-                  <Clock3 />
-                  <span>الساعة الآن<b>٠١:١٥ م</b></span>
+                <div className="realtime-clock-badge">
+                  <span className="realtime-pulse-dot" />
+                  <Clock3 className="w-5 h-5 text-teal-700 shrink-0" />
+                  <div className="flex flex-col">
+                    <small>التوقيت الفعلي المباشر</small>
+                    <b className="font-mono text-sm tracking-wide">{currentTime || '٠١:١٥:٤٢ م'}</b>
+                  </div>
                 </div>
               </div>
 
@@ -1234,6 +1401,11 @@ function ERP({
                   <b>{scopedAppointments.filter((a) => a.billing_type === 'cash').length}</b>
                   <em>بأسعار المركز الرسمية</em>
                 </article>
+              </div>
+
+              {/* Dynamic Interactive Daily Visits Chart */}
+              <div className="mb-6">
+                <InteractiveFlowChart onNotice={onNotice} />
               </div>
 
               {/* Appointments & Live Queue */}
@@ -1266,6 +1438,19 @@ function ERP({
                           <Badge variant={r.status === 'checked_in' ? 'default' : 'outline'} className="text-[9px]">
                             {r.status === 'checked_in' ? 'بالعيادة' : r.status === 'completed' ? 'تم الكشف' : 'مؤكد'}
                           </Badge>
+                          {r.status === 'checked_in' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                onNotice(`🔔 نداء فوري: استدعاء المريض (${r.patient_name}) للدخول إلى عيادة ${r.specialty_ar} بالدور الثاني!`);
+                              }}
+                              className="text-[10px] h-6 px-2 text-teal-700 hover:bg-teal-50"
+                              title="استدعاء الحالة للدخول للعيادة"
+                            >
+                              استدعاء
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1491,6 +1676,11 @@ function ERP({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* TAB: ATTENDANCE & OVERTIME */}
+          {activeTab === 'الغياب والحضور' && (
+            <AttendanceSection activeRole={activePersona.role} onNotice={onNotice} />
           )}
 
           {/* TAB 5: THE 6 BRANCHES */}
@@ -1889,6 +2079,24 @@ function ERP({
           }}
         />
       )}
+
+      {/* Omni-search modal */}
+      <OmniSearchBar
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        patients={patients}
+        appointments={appointments}
+        onSelectPatient={(pt) => {
+          setSelectedPatientForHistory(pt);
+          setSearchModalOpen(false);
+        }}
+        onNavigateSection={(sec) => {
+          setActiveTab(sec);
+          setSearchModalOpen(false);
+          onNotice(`تم الانتقال إلى: ${sec}`);
+        }}
+        onNotice={onNotice}
+      />
     </div>
   );
 }

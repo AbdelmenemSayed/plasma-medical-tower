@@ -343,3 +343,104 @@ button,a{transition:transform .18s ease,box-shadow .18s ease,background-color .1
   font-weight: 700;
 }
 
+/* Notification Dropdown */
+.notification-dropdown {
+  position: absolute;
+  top: 65px;
+  left: 32px;
+  width: min(390px, 94vw);
+  background: #fff;
+  border: 1px solid #dce6e2;
+  border-radius: 18px;
+  z-index: 80;
+  animation: dropIn 0.22s ease-out;
+}
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Clock-In Button */
+.clock-in-btn {
+  background: linear-gradient(135deg, #0b6f6f, #085558);
+  color: #fff;
+  border: 1px solid #148b8b;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: 0 4px 14px rgba(8,126,130,0.22);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.clock-in-btn:hover {
+  background: linear-gradient(135deg, #108585, #0a6568);
+  transform: translateY(-1px);
+}
+.clock-in-btn.clocked-in {
+  background: #e8f7f2;
+  color: #0a6b52;
+  border-color: #a3dec9;
+  box-shadow: none;
+}
+
+/* Real-time Clock */
+.realtime-clock-badge {
+  background: #fff;
+  border: 1px solid #dbe5e1;
+  padding: 6px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(10,48,56,0.04);
+}
+.realtime-clock-badge svg {
+  color: #087e82;
+  width: 17px;
+  height: 17px;
+}
+.realtime-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+  animation: signalBlink 1.4s infinite;
+}
+
+/* Notification Center Dropdown */
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  width: 380px;
+  max-width: 90vw;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  z-index: 60;
+  overflow: hidden;
+  box-shadow: 0 20px 35px -8px rgba(10, 48, 56, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  animation: slideDownFade 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
