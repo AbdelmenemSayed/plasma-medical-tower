@@ -22,6 +22,13 @@ CREATE TABLE IF NOT EXISTS public.pmt_branches (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure columns exist in pmt_branches in case table pre-existed
+ALTER TABLE public.pmt_branches ADD COLUMN IF NOT EXISTS name_en TEXT;
+ALTER TABLE public.pmt_branches ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE public.pmt_branches ADD COLUMN IF NOT EXISTS opening_hours TEXT DEFAULT '٩:٠٠ ص - ١١:٠٠ م';
+ALTER TABLE public.pmt_branches ADD COLUMN IF NOT EXISTS completion_rate INT DEFAULT 100;
+ALTER TABLE public.pmt_branches ADD COLUMN IF NOT EXISTS notes TEXT;
+
 -- 3. Staff Profiles & Roles Table (سجل المستخدمين وتصنيفات الموظفين)
 CREATE TABLE IF NOT EXISTS public.pmt_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -128,8 +135,13 @@ CREATE TABLE IF NOT EXISTS public.pmt_medical_records (
 );
 
 -- Ensure columns exist for pmt_medical_records
+ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS patient_id UUID REFERENCES public.pmt_patients(id) ON DELETE SET NULL;
+ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS doctor_id UUID REFERENCES public.pmt_profiles(id) ON DELETE SET NULL;
 ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS chief_complaint TEXT;
 ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS vitals JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS lab_requests TEXT;
+ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS radiology_requests TEXT;
+ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS clinical_notes TEXT;
 ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS follow_up_date DATE;
 ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.pmt_branches(id) ON DELETE SET NULL;
 ALTER TABLE public.pmt_medical_records ADD COLUMN IF NOT EXISTS patient_mrn TEXT;
