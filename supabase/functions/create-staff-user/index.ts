@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const { data: caller } = await admin.auth.getUser(token);
     if (!caller.user) return new Response(JSON.stringify({ error: 'غير مصرح' }), { status: 401, headers });
     const { data: callerProfile } = await admin.from('pmt_profiles').select('role').eq('id', caller.user.id).maybeSingle();
-    if (callerProfile?.role !== 'admin') return new Response(JSON.stringify({ error: 'إنشاء الحسابات متاح لمدير النظام فقط' }), { status: 403, headers });
+    if (callerProfile?.role !== 'admin') return new Response(JSON.stringify({ error: 'إنشاء الحسابات وتعيين الأدوار متاح للمدير العام فقط' }), { status: 403, headers });
     const body = await req.json();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
@@ -22,10 +22,30 @@ Deno.serve(async (req) => {
     const role = String(body.role || 'reception');
     const phone = String(body.phone || '').trim();
     const branchId = body.branch_id ? String(body.branch_id) : null;
-    if (!email || password.length < 8 || !fullName || !['doctor','branch_manager','reception','laboratory','radiology','call_center','accounting','admin'].includes(role)) return new Response(JSON.stringify({ error: 'راجع البيانات المطلوبة وكلمة المرور (٨ أحرف على الأقل)' }), { status: 400, headers });
-    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: fullName, role } });
+    const specialtyAr = body.specialty_ar ? String(body.specialty_ar) : null;
+    const titleAr = body.title_ar ? String(body.title_ar) : null;
+
+    if (!email || password.length < 8 || !fullName || !['admin','branch_manager','doctor','reception','laboratory','radiology','accounting'].includes(role)) {
+      return new Response(JSON.stringify({ error: 'راجع البيانات المطلوبة وكلمة المرور (٨ أحرف على الأقل)' }), { status: 400, headers });
+    }
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, role, branch_id: branchId, specialty_ar: specialtyAr }
+    });
     if (error || !data.user) return new Response(JSON.stringify({ error: error?.message || 'تعذر إنشاء الحساب' }), { status: 400, headers });
-    await admin.from('pmt_profiles').upsert({ id: data.user.id, full_name: fullName, role, phone, branch_id: branchId });
+    await admin.from('pmt_profiles').upsert({
+      id: data.user.id,
+      full_name: fullName,
+      role,
+      phone,
+      branch_id: branchId,
+      specialty_ar: specialtyAr,
+      title_ar: titleAr
+    });
     return new Response(JSON.stringify({ id: data.user.id, email, role }), { status: 200, headers });
-  } catch (error) { return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'حدث خطأ غير متوقع' }), { status: 500, headers }); }
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'حدث خطأ غير متوقع' }), { status: 500, headers });
+  }
 });

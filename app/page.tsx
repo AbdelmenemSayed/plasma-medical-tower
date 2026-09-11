@@ -7,12 +7,17 @@ import {
   CircleDollarSign, Clock3, ExternalLink, Eye, EyeOff, FileHeart, FlaskConical,
   HeartPulse, Hospital, LayoutDashboard, LoaderCircle, LogOut, MapPin, Menu, MessageCircle,
   Navigation, Package, Phone, Plus, QrCode, Radio, Search, Settings, ShieldCheck,
-  Sparkles, Stethoscope, TestTube2, Users, WalletCards, X,
+  Sparkles, Stethoscope, TestTube2, Users, WalletCards, X, Building2, UserCheck, CheckCircle2,
+  HardHat, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
+import { RolePersonaSwitcher, defaultPersonas, type Persona } from '@/components/RolePersonaSwitcher';
+import { DoctorWorkspace, type DoctorAppointmentItem } from '@/components/DoctorWorkspace';
+import { PatientHistoryModal, type MedicalRecordItem, type PatientData } from '@/components/PatientHistoryModal';
+import { ReceptionBookingModal } from '@/components/ReceptionBookingModal';
 
 type Screen = 'home' | 'login' | 'erp';
 type BookingData = { specialty: string; doctor: string; date: string; time: string; name: string; phone: string; visitType: string; notes: string; insurance: 'yes' | 'no'; insuranceCompany: string; patientAddress: string; homeVisit: boolean; branchId: string; branchName: string };
@@ -28,17 +33,120 @@ const clinics = [
   { name: 'التحاليل الطبية', meta: 'سحب منزلي · نتائج رقمية', icon: FlaskConical, doctors: 'يوميًا' },
 ];
 
-const doctors = [
-  { name: 'د. أحمد عادل', title: 'استشاري القلب والقسطرة', degree: 'قصر العيني', next: 'اليوم · ٧:٣٠ م', initials: 'أع', accent: 'mint' },
-  { name: 'د. سارة فتحي', title: 'استشاري الأطفال وحديثي الولادة', degree: 'جامعة القاهرة', next: 'غدًا · ٤:٠٠ م', initials: 'سف', accent: 'sand' },
-  { name: 'د. محمد الشاذلي', title: 'استشاري جراحة العظام', degree: 'جامعة عين شمس', next: 'اليوم · ٨:٠٠ م', initials: 'مش', accent: 'blue' },
+const doctorsList = [
+  { name: 'د. أحمد عادل', title: 'استشاري القلب والقسطرة', degree: 'قصر العيني', next: 'اليوم · ٧:٣٠ م', initials: 'أع', accent: 'mint', specialty: 'القلب والأوعية الدموية' },
+  { name: 'د. سارة فتحي', title: 'استشاري الأطفال وحديثي الولادة', degree: 'جامعة القاهرة', next: 'غدًا · ٤:٠٠ م', initials: 'سف', accent: 'sand', specialty: 'طب الأطفال' },
+  { name: 'د. محمد الشاذلي', title: 'استشاري جراحة العظام', degree: 'جامعة عين شمس', next: 'اليوم · ٨:٠٠ م', initials: 'مش', accent: 'blue', specialty: 'العظام والمفاصل' },
+  { name: 'د. إبراهيم فؤاد', title: 'استشاري الباطنة والسكر', degree: 'جامعة القاهرة', next: 'اليوم · ٦:٠٠ م', initials: 'إف', accent: 'mint', specialty: 'الباطنة والسكر' },
 ];
 
-const insuranceCompanies = ['مصر للتأمين', 'ثروة كير', 'أكسا مصر', 'متلايف', 'بوبا مصر'];
-const initialBooking: BookingData = { specialty: 'القلب والأوعية الدموية', doctor: 'د. أحمد عادل', date: '2026-09-09', time: '٧:٣٠ م', name: '', phone: '', visitType: 'كشف جديد', notes: '', insurance: 'no', insuranceCompany: '', patientAddress: '', homeVisit: false, branchId: '', branchName: '' };
+const insuranceCompanies = ['مصر للتأمين', 'ثروة كير', 'أكسا مصر', 'متلايف', 'بوبا مصر', 'جي أي جي (GIG)'];
+
+// 6 Branches: 4 Active + 2 Under Construction
+const initialBranches = [
+  { id: 'b-hawamdia', name_ar: 'فرع الحوامدية الرئيسي', name_en: 'Main Al Hawamdia', address_ar: 'بجوار بنك الإسكندرية، أمام مرور الحوامدية', phone: '01021869999', city_ar: 'الجيزة', status: 'active', is_active: true, completion_rate: 100, opening_hours: '٩ ص - ١١ م', notes: 'الفرع الرئيسي المتكامل: عيادات، طوارئ، معمل، وأشعة' },
+  { id: 'b-badrasheen', name_ar: 'فرع البدرشين', name_en: 'Al Badrasheen', address_ar: 'شارع النيل، مجمع العيادات التخصصية', phone: '01035719999', city_ar: 'الجيزة', status: 'active', is_active: true, completion_rate: 100, opening_hours: '٩ ص - ١١ م', notes: 'عيادات تخصصية متكاملة وقسم استقبال وطوارئ' },
+  { id: 'b-tamouh', name_ar: 'فرع طموه / المنيب', name_en: 'Tamouh / El Mounib', address_ar: 'طريق مصر أسوان الزراعي، مدخل طموه', phone: '0238120999', city_ar: 'الجيزة', status: 'active', is_active: true, completion_rate: 100, opening_hours: '٩ ص - ١٠ م', notes: 'مركز سحب عينات واستقبال وعيادات خارجية' },
+  { id: 'b-ayat', name_ar: 'فرع العياط', name_en: 'Al Ayat', address_ar: 'شارع الجيش، برج الأطباء، الدور الثاني', phone: '01021869998', city_ar: 'الجيزة', status: 'active', is_active: true, completion_rate: 100, opening_hours: '١٠ ص - ١٠ م', notes: 'عيادات استشارية متقدمة ومركز أشعة رقمي' },
+  { id: 'b-october', name_ar: 'فرع مدينة 6 أكتوبر', name_en: '6th of October', address_ar: 'المحور المركزي، بالقرب من ميدان الحصري', phone: '01099912345', city_ar: 'الجيزة', status: 'under_construction', is_active: false, completion_rate: 75, opening_hours: 'قريباً', notes: 'فرع قيد التجهيز والتشطيب (نسبة الإنجاز ٧٥٪ - الافتتاح قريباً)' },
+  { id: 'b-maadi', name_ar: 'فرع المعادي', name_en: 'Maadi Branch', address_ar: 'شارع النصر، المعادي الجديدة', phone: '01088854321', city_ar: 'القاهرة', status: 'under_construction', is_active: false, completion_rate: 40, opening_hours: 'المرحلة الإنشائية', notes: 'فرع قيد الإنشاء والترخيص (نسبة الإنجاز ٤٠٪ - الربع الأول ٢٠٢٧)' },
+];
+
+const initialPatientsData: PatientData[] = [
+  { id: 'p1', mrn: 'PLZ-1001', full_name_ar: 'أحمد محمد السيد', phone: '01012345678', gender: 'male', billing_type: 'cash', address_ar: 'الحوامدية - شارع الجمهورية', chronic_conditions: 'ارتفاع ضغط الدم المزمن، حساسية موسمية خفيفة', created_at: '2026-08-10' },
+  { id: 'p2', mrn: 'PLZ-1002', full_name_ar: 'منى عبد الرحمن حسن', phone: '01123456789', gender: 'female', billing_type: 'insurance', insurance_company: 'مصر للتأمين', insurance_card_number: 'MS-882941', address_ar: 'البدرشين - بجوار محطة القطار', chronic_conditions: 'حساسية شديدة من البنسلين ومشتقاته', created_at: '2026-08-18' },
+  { id: 'p3', mrn: 'PLZ-1003', full_name_ar: 'محمود خليل إبراهيم', phone: '01234567890', gender: 'male', billing_type: 'insurance', insurance_company: 'أكسا مصر', insurance_card_number: 'AX-551029', address_ar: 'طموه - الجزيرة', chronic_conditions: 'داء السكري من النوع الثاني، جراحة غضروف قطني سابقة عام ٢٠٢٠', created_at: '2026-08-25' },
+  { id: 'p4', mrn: 'PLZ-1004', full_name_ar: 'فاطمة علي الدسوقي', phone: '01555667788', gender: 'female', billing_type: 'cash', address_ar: 'العياط - شارع الكورنيش', chronic_conditions: 'لا توجد أمراض مزمنة، متابعة صحة المرأة', created_at: '2026-09-02' },
+];
+
+const initialAppointmentsData: DoctorAppointmentItem[] = [
+  { id: 'app1', booking_code: 'PMT-24098', patient_name: 'أحمد محمد السيد', patient_phone: '01012345678', specialty_ar: 'القلب والأوعية الدموية', doctor_name: 'د. أحمد عادل', appointment_date: '2026-09-11', appointment_time: '٧:٣٠ م', visit_type: 'كشف جديد', billing_type: 'cash', status: 'checked_in', notes: 'صداع مستمر وخفقان سريع', branch_id: 'b-hawamdia' },
+  { id: 'app2', booking_code: 'PMT-24097', patient_name: 'منى عبد الرحمن حسن', patient_phone: '01123456789', specialty_ar: 'طب الأطفال', doctor_name: 'د. سارة فتحي', appointment_date: '2026-09-11', appointment_time: '٨:٠٠ م', visit_type: 'متابعة', billing_type: 'insurance', insurance_company: 'مصر للتأمين', status: 'checked_in', notes: 'ارتفاع في درجة حرارة الطفل وكحة', branch_id: 'b-badrasheen' },
+  { id: 'app3', booking_code: 'PMT-24096', patient_name: 'محمود خليل إبراهيم', patient_phone: '01234567890', specialty_ar: 'العظام والمفاصل', doctor_name: 'د. محمد الشاذلي', appointment_date: '2026-09-11', appointment_time: '٨:٣٠ م', visit_type: 'كشف جديد', billing_type: 'insurance', insurance_company: 'أكسا مصر', status: 'confirmed', notes: 'ألم حاد في الركبة اليمنى بعد التواء', branch_id: 'b-hawamdia' },
+  { id: 'app4', booking_code: 'PMT-24095', patient_name: 'فاطمة علي الدسوقي', patient_phone: '01555667788', specialty_ar: 'النساء والتوليد', doctor_name: 'د. رانيا يوسف', appointment_date: '2026-09-11', appointment_time: '٩:٠٠ م', visit_type: 'متابعة حمل', billing_type: 'cash', status: 'confirmed', notes: 'سونار ومتابعة شهر سابع', branch_id: 'b-ayat' },
+];
+
+const initialMedicalRecords: MedicalRecordItem[] = [
+  {
+    id: 'mr1',
+    patient_name: 'أحمد محمد السيد',
+    patient_phone: '01012345678',
+    patient_mrn: 'PLZ-1001',
+    specialty_ar: 'القلب والأوعية الدموية',
+    doctor_name: 'د. أحمد عادل',
+    chief_complaint: 'صداع خلف الرأس مع دوخة وخفقان متكرر',
+    diagnosis: 'ارتفاع أولي في ضغط الدم من الدرجة الأولى (Primary Essential Hypertension Stage 1)',
+    vitals: { bp: '145/92', hr: 82, temp: 36.8, blood_sugar: 98, weight: 81 },
+    prescriptions: [
+      { drug_name: 'Concor 5mg', dose: 'قرص صباحاً على الريق', duration: 'مستمر' },
+      { drug_name: 'Aspirin Protect 100mg', dose: 'قرص يومياً بعد الغداء', duration: 'مستمر' }
+    ],
+    lab_requests: 'صورة دم كاملة CBC، دهون ثلاثية وكوليسترول Lipid Profile',
+    clinical_notes: 'الاستجابة جيدة، تم نصح المريض بتقليل الأملاح والمشي نصف ساعة يومياً',
+    follow_up_date: '2026-09-25',
+    created_at: '2026-08-11T19:30:00Z'
+  },
+  {
+    id: 'mr2',
+    patient_name: 'أحمد محمد السيد',
+    patient_phone: '01012345678',
+    patient_mrn: 'PLZ-1001',
+    specialty_ar: 'الباطنة والسكر',
+    doctor_name: 'د. إبراهيم فؤاد',
+    chief_complaint: 'متابعة دورية لتحليل السكر الصائم',
+    diagnosis: 'مرحلة ما قبل السكري (Impaired Fasting Glucose)',
+    vitals: { bp: '130/84', hr: 76, temp: 37.0, blood_sugar: 118, weight: 80 },
+    prescriptions: [
+      { drug_name: 'Glucophage 500mg', dose: 'قرص مرة واحدة مع وجبة العشاء', duration: 'شهر' }
+    ],
+    clinical_notes: 'سكر تراكمي HbA1c بنسبة ٥.٩٪، ينصح بضبط السكريات والنشويات',
+    follow_up_date: '2026-10-10',
+    created_at: '2026-08-28T18:00:00Z'
+  },
+  {
+    id: 'mr3',
+    patient_name: 'محمود خليل إبراهيم',
+    patient_phone: '01234567890',
+    patient_mrn: 'PLZ-1003',
+    specialty_ar: 'العظام والمفاصل',
+    doctor_name: 'د. محمد الشاذلي',
+    chief_complaint: 'ألم أسفل الظهر يمتد للساق اليمنى مع تنميل',
+    diagnosis: 'انزلاق غضروفي قطني L4-L5 مع عرق النسا (Sciatica)',
+    vitals: { bp: '125/80', hr: 74, temp: 36.9, blood_sugar: 135, weight: 89 },
+    prescriptions: [
+      { drug_name: 'Celebrex 200mg', dose: 'كبسولة بعد الأكل عند اللزوم', duration: '١٠ أيام' },
+      { drug_name: 'Milga Advance', dose: 'قرص مرتين يومياً بعد الأكل', duration: 'شهر' }
+    ],
+    radiology_requests: 'رنين مغناطيسي MRI على الفقرات القطنية',
+    clinical_notes: 'تم تحويل الحالة لجلسات علاج طبيعي وتجنب حمل الأوزان الثقيلة',
+    follow_up_date: '2026-09-18',
+    created_at: '2026-08-26T20:15:00Z'
+  }
+];
+
+const initialBooking: BookingData = {
+  specialty: 'القلب والأوعية الدموية',
+  doctor: 'د. أحمد عادل',
+  date: '2026-09-11',
+  time: '٧:٣٠ م',
+  name: '',
+  phone: '',
+  visitType: 'كشف جديد',
+  notes: '',
+  insurance: 'no',
+  insuranceCompany: '',
+  patientAddress: '',
+  homeVisit: false,
+  branchId: 'b-hawamdia',
+  branchName: 'فرع الحوامدية الرئيسي'
+};
 
 function Brand({ light = false, compact = false }: { light?: boolean; compact?: boolean }) {
-  return <div className={`brand ${light ? 'light' : ''} ${compact ? 'compact' : ''}`}><img className="brand-logo" src="/pmt-logo.jpeg" alt="برج بلازما الطبي - الحوامدية" /></div>;
+  return (
+    <div className={`brand ${light ? 'light' : ''} ${compact ? 'compact' : ''}`}>
+      <img className="brand-logo" src="/pmt-logo.jpeg" alt="برج بلازما الطبي" />
+    </div>
+  );
 }
 
 export default function Home() {
@@ -49,125 +157,1738 @@ export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [notice, setNotice] = useState('');
 
+  // Active Role Persona (Default: Admin for comprehensive review)
+  const [activePersona, setActivePersona] = useState<Persona>(defaultPersonas[0]);
+
   useEffect(() => {
     supabase?.auth.getSession().then(({ data }) => setSession(data.session));
     const listener = supabase?.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => listener?.data.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      const target = (event.target as HTMLElement).closest('button, a');
-      if (!target || target.classList.contains('modal-backdrop')) return;
-      target.classList.remove('interaction-pulse');
-      window.requestAnimationFrame(() => target.classList.add('interaction-pulse'));
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, []);
-
   const openBooking = (specialty?: string, doctor?: string) => {
     setBooking((old) => ({ ...old, specialty: specialty || old.specialty, doctor: doctor || old.doctor }));
-    setBookingStep(specialty ? 2 : 1); setBookingOpen(true);
+    setBookingStep(specialty ? 2 : 1);
+    setBookingOpen(true);
   };
-  const toast = (text: string) => { setNotice(text); window.setTimeout(() => setNotice(''), 2800); };
 
-  return <main dir="rtl" className="pmt-app">
-    {screen === 'home' && <PublicSite onBook={openBooking} onLogin={() => setScreen(session ? 'erp' : 'login')} />}
-    {screen === 'login' && <Login onBack={() => setScreen('home')} onSuccess={() => setScreen('erp')} />}
-    {screen === 'erp' && <ERP session={session} onBack={() => setScreen('home')} onNotice={toast} />}
-    {bookingOpen && <BookingWizard step={bookingStep} setStep={setBookingStep} data={booking} setData={setBooking} onClose={() => setBookingOpen(false)} />}
-    {notice && <div className="notice"><Check />{notice}</div>}
-  </main>;
+  const toast = (text: string) => {
+    setNotice(text);
+    window.setTimeout(() => setNotice(''), 3000);
+  };
+
+  return (
+    <main dir="rtl" className="pmt-app">
+      {screen === 'home' && (
+        <PublicSite
+          onBook={openBooking}
+          onLogin={() => setScreen(session ? 'erp' : 'login')}
+          branches={initialBranches}
+        />
+      )}
+
+      {screen === 'login' && (
+        <Login
+          onBack={() => setScreen('home')}
+          onSuccess={() => setScreen('erp')}
+          onDemoSelect={(persona) => {
+            setActivePersona(persona);
+            setScreen('erp');
+            toast(`تم تسجيل الدخول بصلاحية: ${persona.title}`);
+          }}
+        />
+      )}
+
+      {screen === 'erp' && (
+        <ERP
+          session={session}
+          activePersona={activePersona}
+          onSelectPersona={setActivePersona}
+          onBack={() => setScreen('home')}
+          onNotice={toast}
+        />
+      )}
+
+      {bookingOpen && (
+        <BookingWizard
+          step={bookingStep}
+          setStep={setBookingStep}
+          data={booking}
+          setData={setBooking}
+          onClose={() => setBookingOpen(false)}
+        />
+      )}
+
+      {notice && (
+        <div className="notice">
+          <Check />
+          {notice}
+        </div>
+      )}
+    </main>
+  );
 }
 
-function PublicSite({ onBook, onLogin }: { onBook: (specialty?: string, doctor?: string) => void; onLogin: () => void }) {
+function PublicSite({ onBook, onLogin, branches }: { onBook: (specialty?: string, doctor?: string) => void; onLogin: () => void; branches: typeof initialBranches }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); setMenuOpen(false); };
-  return <>
-    <div className="utility-bar"><div><span><MapPin /> الحوامدية — بجوار بنك الإسكندرية، أمام المرور</span><a href="tel:01021869999"><Phone /> 01021869999</a></div><div><span className="open-dot" /> مفتوحون اليوم حتى ١١ مساءً</div></div>
-    <header className="main-header"><Brand /><nav className={menuOpen ? 'open' : ''}><button onClick={() => scrollTo('home')}>الرئيسية</button><button onClick={() => scrollTo('clinics')}>العيادات</button><button onClick={() => scrollTo('doctors')}>الأطباء</button><button onClick={() => scrollTo('services')}>الخدمات</button><button onClick={() => scrollTo('contact')}>الموقع والتواصل</button></nav><div className="main-actions"><button className="staff-link" onClick={onLogin}><ShieldCheck /> دخول فريق العمل</button><Button onClick={() => onBook()}>احجز كشف</Button><button className="mobile-menu" aria-label="القائمة" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button></div></header>
-    <section className="new-hero" id="home">
-      <div className="hero-grid-noise" aria-hidden="true" />
-      <div className="hero-main">
-        <Badge className="local-badge"><span className="signal-dot" /> رعاية متكاملة لأهالي الحوامدية</Badge>
-        <p className="hero-kicker">برج بلازما الطبي · الحوامدية</p>
-        <h1>رعاية قريبة.<br /><em>ونبض يطمنك.</em></h1>
-        <p>من أول حجزك لحد المتابعة بعد الكشف، بنرتّب رحلة علاجك في مكان واحد وباهتمام حقيقي بأهلك.</p>
-        <div className="hero-cta"><Button size="lg" onClick={() => onBook()}>احجز موعدك الآن <ArrowLeft /></Button><a className="whatsapp-btn" href="https://wa.me/201021869999" target="_blank" rel="noreferrer"><MessageCircle /> كلمنا واتساب</a></div>
-        <div className="vitals-card" aria-label="مؤشر الخدمة المباشرة"><div className="vitals-title"><span className="live-dot" /> الخدمة تعمل الآن <small>تحديث مباشر</small></div><svg viewBox="0 0 620 86" className="pulse-line" aria-hidden="true"><path className="pulse-fade" d="M0 44H116l18-18 20 48 29-67 25 37h74l21-18 19 18h123l19-18 19 18h138" /><path className="pulse-stroke" d="M0 44H116l18-18 20 48 29-67 25 37h74l21-18 19 18h123l19-18 19 18h138" /></svg><div className="vitals-values"><span><b>٠٨ د</b>متوسط الانتظار</span><span><b>٤٢</b>موعدًا اليوم</span><span><b>٩٨٪</b>رضا الزوار</span></div></div>
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setMenuOpen(false);
+  };
+
+  return (
+    <>
+      <div className="utility-bar">
+        <div>
+          <span><MapPin /> فروعنا: الحوامدية، البدرشين، طموه، العياط · وقريباً 6 أكتوبر والمعادي</span>
+          <a href="tel:01021869999"><Phone /> 01021869999</a>
+        </div>
+        <div>
+          <span className="open-dot" /> 4 فروع مفتوحة اليوم حتى ١١ مساءً
+        </div>
       </div>
-      <div className="hero-photo">
-        <div className="hero-orbit orbit-one" aria-hidden="true" /><div className="hero-orbit orbit-two" aria-hidden="true" />
-        <img src="/egyptian-care-hero.png" alt="طبيبة مصرية تتحدث مع أم وابنتها في عيادة حديثة" />
-        <div className="photo-label"><span><BadgeCheck /> استقبال ومتابعة يومية</span><strong>السبت–الخميس&nbsp; ٩ص–١١م</strong></div>
-        <div className="floating-ticket"><span>أقرب موعد متاح</span><b>اليوم · ٧:٣٠ م</b><button onClick={() => onBook('القلب والأوعية الدموية', 'د. أحمد عادل')}>احجزه الآن <ArrowLeft /></button></div>
-        <div className="care-beacon"><HeartPulse /><span>متابعة حية<br /><b>مع كل زيارة</b></span></div>
-      </div>
-    </section>
-    <section className="quick-strip"><a href="tel:0238120999"><span><Phone /></span><div><b>احجز بالتليفون</b><small>02 3812 0999</small></div><ArrowLeft /></a><button onClick={() => onBook()}><span><CalendarDays /></span><div><b>حجز أونلاين</b><small>اختار دكتورك وميعادك</small></div><ArrowLeft /></button><a href="https://maps.google.com/?q=Plasma+Medical+Tower+Al+Hawamdia" target="_blank" rel="noreferrer"><span><Navigation /></span><div><b>اعرف الطريق</b><small>أمام مرور الحوامدية</small></div><ExternalLink /></a><a href="https://wa.me/201021869999" target="_blank" rel="noreferrer"><span><MessageCircle /></span><div><b>خدمة العملاء</b><small>متاحين على واتساب</small></div><ArrowLeft /></a></section>
-    <section className="content-section clinics-section" id="clinics"><div className="section-title"><div><span className="overline">عيادات برج بلازما</span><h2>التخصص الصح، من أول مرة.</h2></div><p>اختار التخصص واحجز مباشرة. لو مش عارف تبدأ منين، فريق خدمة العملاء هيساعدك.</p></div><div className="clinic-grid">{clinics.map(({ name, meta, icon: Icon, doctors: count }, i) => <button key={name} className={`clinic-tile clinic-${i}`} onClick={() => onBook(name)}><span className="clinic-icon"><Icon /></span><span className="clinic-copy"><b>{name}</b><small>{meta}</small></span><span className="clinic-count">{count}</span><ArrowLeft /></button>)}</div></section>
-    <section className="experience-band" id="services"><div className="experience-copy"><span className="overline">زيارة من غير تعقيد</span><h2>كل خطوة محسوبة<br />عشان وقتك وصحتك.</h2><p>نظام واحد بيربط الاستقبال والعيادة والمعمل والأشعة، فبياناتك بتوصل للمكان الصح في الوقت الصح.</p><div className="experience-list"><div><span>١</span><b>احجز وحدد ميعادك</b><small>أونلاين أو بالتليفون</small></div><div><span>٢</span><b>ادخل من غير زحمة</b><small>كود حجز ودور واضح</small></div><div><span>٣</span><b>استلم نتائجك</b><small>متابعة رقمية آمنة</small></div></div></div><div className="visit-card"><div className="visit-head"><Brand compact /><div><small>موعد مؤكد</small><b>PMT-24098</b></div><QrCode /></div><div className="visit-doctor"><span className="doctor-avatar mint">أع</span><div><b>د. أحمد عادل</b><small>استشاري القلب والقسطرة</small></div><Badge>غدًا</Badge></div><div className="visit-details"><div><CalendarDays /><span><small>التاريخ</small><b>الأربعاء ٩ سبتمبر</b></span></div><div><Clock3 /><span><small>الوقت</small><b>٧:٣٠ مساءً</b></span></div><div><MapPin /><span><small>المكان</small><b>الدور الثالث · عيادة ٣٠٤</b></span></div></div><button onClick={() => onBook()}>إدارة الموعد <ArrowLeft /></button></div></section>
-    <section className="content-section doctors-section" id="doctors"><div className="section-title"><div><span className="overline">ناس بتفهمك</span><h2>أطباء بخبرة حقيقية، قريبين منك.</h2></div><button onClick={() => onBook()}>عرض كل المواعيد <ArrowLeft /></button></div><div className="new-doctor-grid">{doctors.map((doctor) => <article className="new-doctor-card" key={doctor.name}><div className={`doctor-avatar large ${doctor.accent}`}>{doctor.initials}</div><Badge><span className="online-dot" /> متاح للحجز</Badge><h3>{doctor.name}</h3><p>{doctor.title}</p><div className="doctor-facts"><span><BadgeCheck /> {doctor.degree}</span><span><Clock3 /> {doctor.next}</span></div><Button variant="outline" onClick={() => onBook(doctor.title.includes('القلب') ? 'القلب والأوعية الدموية' : doctor.title.includes('الأطفال') ? 'طب الأطفال' : 'العظام والمفاصل', doctor.name)}>اختار ميعاد <ArrowLeft /></Button></article>)}</div></section>
-    <section className="location-section" id="contact"><div className="map-art"><div className="map-grid" /><span className="road road-1" /><span className="road road-2" /><div className="map-pin"><MapPin /><b>برج بلازما الطبي</b><small>الحوامدية</small></div></div><div className="location-copy"><span className="overline">العنوان</span><h2>في قلب الحوامدية.<br />وسهل توصل لنا.</h2><p>بجوار بنك الإسكندرية، أمام مرور الحوامدية. الاستقبال متاح من السبت للخميس من ٩ صباحًا حتى ١١ مساءً.</p><div className="phone-list"><a href="tel:01021869999"><Phone /> 01021869999</a><a href="tel:01035719999"><Phone /> 01035719999</a><a href="tel:0238120999"><Phone /> 02 3812 0999</a></div><a className="directions" href="https://maps.google.com/?q=Plasma+Medical+Tower+Al+Hawamdia" target="_blank" rel="noreferrer">افتح على خرائط جوجل <ExternalLink /></a></div></section>
-    <footer className="new-footer"><Brand light /><div><a href="tel:01021869999">الطوارئ والاستفسار: 01021869999</a><span>© ٢٠٢٦ برج بلازما الطبي — الحوامدية، الجيزة</span></div><button onClick={onLogin}>بوابة فريق العمل <ArrowLeft /></button></footer>
-  </>;
+
+      <header className="main-header">
+        <Brand />
+        <nav className={menuOpen ? 'open' : ''}>
+          <button onClick={() => scrollTo('home')}>الرئيسية</button>
+          <button onClick={() => scrollTo('branches')}>الفروع (٦)</button>
+          <button onClick={() => scrollTo('clinics')}>العيادات</button>
+          <button onClick={() => scrollTo('doctors')}>الأطباء</button>
+          <button onClick={() => scrollTo('services')}>الخدمات</button>
+          <button onClick={() => scrollTo('contact')}>الموقع والتواصل</button>
+        </nav>
+        <div className="main-actions">
+          <button className="staff-link font-bold text-teal-800" onClick={onLogin}>
+            <ShieldCheck className="w-4 h-4 text-teal-700" />
+            بوابة الإدارة والفريق الطبي
+          </button>
+          <Button onClick={() => onBook()}>احجز كشف</Button>
+          <button className="mobile-menu" aria-label="القائمة" onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+      </header>
+
+      <section className="new-hero" id="home">
+        <div className="hero-grid-noise" aria-hidden="true" />
+        <div className="hero-main">
+          <Badge className="local-badge">
+            <span className="signal-dot" /> شبكة رعاية متكاملة تغطي الجيزة والقاهرة
+          </Badge>
+          <p className="hero-kicker">برج بلازما الطبي · رعاية تخصصية تليق بأهلك</p>
+          <h1>رعاية قريبة.<br /><em>ونبض يطمنك.</em></h1>
+          <p>
+            سواء كنت كشفاً حراً أو تابعاً لإحدى كبرى شركات التأمين، أطباؤنا متاحون لخدمتك في ٤ فروع عاملة مع خطة توسع متقدمة بفرعين جديدين.
+          </p>
+          <div className="hero-cta">
+            <Button size="lg" onClick={() => onBook()}>احجز موعدك الآن <ArrowLeft /></Button>
+            <a className="whatsapp-btn" href="https://wa.me/201021869999" target="_blank" rel="noreferrer">
+              <MessageCircle /> كلمنا واتساب
+            </a>
+          </div>
+          <div className="vitals-card" aria-label="مؤشر الخدمة المباشرة">
+            <div className="vitals-title">
+              <span className="live-dot" /> الخدمة تعمل الآن بكافة الفروع
+              <small>تحديث مباشر</small>
+            </div>
+            <svg viewBox="0 0 620 86" className="pulse-line" aria-hidden="true">
+              <path className="pulse-fade" d="M0 44H116l18-18 20 48 29-67 25 37h74l21-18 19 18h123l19-18 19 18h138" />
+              <path className="pulse-stroke" d="M0 44H116l18-18 20 48 29-67 25 37h74l21-18 19 18h123l19-18 19 18h138" />
+            </svg>
+            <div className="vitals-values">
+              <span><b>٤ فروع</b>عاملة بكفاءة</span>
+              <span><b>فرعان</b>تحت الإنشاء</span>
+              <span><b>٩٨٪</b>رضا الزوار</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-photo">
+          <div className="hero-orbit orbit-one" aria-hidden="true" />
+          <div className="hero-orbit orbit-two" aria-hidden="true" />
+          <img src="/egyptian-care-hero.png" alt="طبيبة مصرية تتحدث مع أم وابنتها في عيادة حديثة" />
+          <div className="photo-label">
+            <span><BadgeCheck /> استقبال ومتابعة يومية بكافة الفروع</span>
+            <strong>السبت–الخميس ٩ص–١١م</strong>
+          </div>
+          <div className="floating-ticket">
+            <span>أقرب موعد متاح</span>
+            <b>اليوم · ٧:٣٠ م</b>
+            <button onClick={() => onBook('القلب والأوعية الدموية', 'د. أحمد عادل')}>
+              احجزه الآن <ArrowLeft />
+            </button>
+          </div>
+          <div className="care-beacon">
+            <HeartPulse />
+            <span>متابعة حية<br /><b>مع كل زيارة</b></span>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Navigation Strip */}
+      <section className="quick-strip">
+        <a href="tel:01021869999">
+          <span><Phone /></span>
+          <div>
+            <b>احجز بالتليفون</b>
+            <small>01021869999</small>
+          </div>
+          <ArrowLeft />
+        </a>
+        <button onClick={() => onBook()}>
+          <span><CalendarDays /></span>
+          <div>
+            <b>حجز أونلاين</b>
+            <small>اختار دكتورك وفرعك</small>
+          </div>
+          <ArrowLeft />
+        </button>
+        <button onClick={() => scrollTo('branches')}>
+          <span><Building2 /></span>
+          <div>
+            <b>فروعنا الستة</b>
+            <small>٤ عاملة + ٢ قيد التجهيز</small>
+          </div>
+          <ArrowLeft />
+        </button>
+        <a href="https://wa.me/201021869999" target="_blank" rel="noreferrer">
+          <span><MessageCircle /></span>
+          <div>
+            <b>خدمة العملاء</b>
+            <small>واتساب على مدار الساعة</small>
+          </div>
+          <ArrowLeft />
+        </a>
+      </section>
+
+      {/* Branches Showcase Section */}
+      <section className="content-section bg-gray-50/50" id="branches">
+        <div className="section-title">
+          <div>
+            <span className="overline">شبكة فروع بلازما</span>
+            <h2>٤ فروع عاملة وفرعان تحت الإنشاء</h2>
+          </div>
+          <p>
+            تنتشر فروع برج بلازما الطبي لتقديم خدمات طبية وسريرية بمعايير عالمية وربط موحد للسجلات الطبية.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {branches.map((b) => {
+            const isActive = b.status === 'active';
+            return (
+              <article key={b.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={isActive ? 'badge-branch-active' : 'badge-branch-const'}>
+                      {isActive ? 'فرع عامل ومتاح للحجز' : `تحت الإنشاء (${b.completion_rate}٪)`}
+                    </span>
+                    <span className="text-[11px] text-gray-500 font-bold">{b.city_ar}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{b.name_ar}</h3>
+                  <p className="text-xs text-gray-600 mb-3 flex items-start gap-1.5 leading-relaxed">
+                    <MapPin className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
+                    {b.address_ar}
+                  </p>
+
+                  {!isActive && (
+                    <div className="const-progress-wrap">
+                      <div className="const-progress-label">
+                        <span>نسبة الإنجاز والتجهيز:</span>
+                        <span>{b.completion_rate}٪</span>
+                      </div>
+                      <div className="const-progress-bar">
+                        <div className="const-progress-fill" style={{ width: `${b.completion_rate}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-100 mt-2">
+                    {b.notes}
+                  </p>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between">
+                  <div className="text-xs text-gray-600">
+                    <Clock3 className="w-3.5 h-3.5 inline ml-1 text-teal-700" />
+                    {b.opening_hours}
+                  </div>
+                  {isActive ? (
+                    <Button size="sm" onClick={() => onBook()} className="bg-teal-700 hover:bg-teal-800 text-white text-xs">
+                      احجز بالفرع <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[10px]">
+                      الافتتاح قريباً
+                    </Badge>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Clinics Section */}
+      <section className="content-section clinics-section" id="clinics">
+        <div className="section-title">
+          <div>
+            <span className="overline">عيادات برج بلازما</span>
+            <h2>التخصص الصح، من أول مرة.</h2>
+          </div>
+          <p>اختار التخصص واحجز مباشرة. نقبل الحالات الحرة والتعاقدات التأمينية الكبرى.</p>
+        </div>
+        <div className="clinic-grid">
+          {clinics.map(({ name, meta, icon: Icon, doctors: count }, i) => (
+            <button key={name} className={`clinic-tile clinic-${i}`} onClick={() => onBook(name)}>
+              <span className="clinic-icon"><Icon /></span>
+              <span className="clinic-copy">
+                <b>{name}</b>
+                <small>{meta}</small>
+              </span>
+              <span className="clinic-count">{count}</span>
+              <ArrowLeft />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Doctors Section */}
+      <section className="content-section doctors-section" id="doctors">
+        <div className="section-title">
+          <div>
+            <span className="overline">نخبة الأطباء</span>
+            <h2>استشاريون بخبرة سريرية رائدة</h2>
+          </div>
+          <button onClick={() => onBook()}>عرض كل المواعيد <ArrowLeft /></button>
+        </div>
+        <div className="new-doctor-grid">
+          {doctorsList.map((doctor) => (
+            <article className="new-doctor-card" key={doctor.name}>
+              <div className={`doctor-avatar large ${doctor.accent}`}>{doctor.initials}</div>
+              <Badge><span className="online-dot" /> متاح للحجز</Badge>
+              <h3>{doctor.name}</h3>
+              <p>{doctor.title}</p>
+              <div className="doctor-facts">
+                <span><BadgeCheck /> {doctor.degree}</span>
+                <span><Clock3 /> {doctor.next}</span>
+              </div>
+              <Button variant="outline" onClick={() => onBook(doctor.specialty, doctor.name)}>
+                اختار ميعاد <ArrowLeft />
+              </Button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="location-section" id="contact">
+        <div className="map-art">
+          <div className="map-grid" />
+          <span className="road road-1" />
+          <span className="road road-2" />
+          <div className="map-pin">
+            <MapPin />
+            <b>برج بلازما الطبي</b>
+            <small>الحوامدية · الجيزة</small>
+          </div>
+        </div>
+        <div className="location-copy">
+          <span className="overline">الفروع والتواصل</span>
+          <h2>خدمة سريعة في قلب الجيزة</h2>
+          <p>
+            المقر الرئيسي بالحوامدية بجوار بنك الإسكندرية، أمام المرور. مع فروع في البدرشين، طموه، العياط، والفرعين الجديدين في 6 أكتوبر والمعادي.
+          </p>
+          <div className="phone-list">
+            <a href="tel:01021869999"><Phone /> 01021869999</a>
+            <a href="tel:01035719999"><Phone /> 01035719999</a>
+            <a href="tel:0238120999"><Phone /> 02 3812 0999</a>
+          </div>
+          <a className="directions" href="https://maps.google.com/?q=Plasma+Medical+Tower+Al+Hawamdia" target="_blank" rel="noreferrer">
+            افتح على خرائط جوجل <ExternalLink />
+          </a>
+        </div>
+      </section>
+
+      <footer className="new-footer">
+        <Brand light />
+        <div>
+          <a href="tel:01021869999">الطوارئ والاستفسار: 01021869999</a>
+          <span>© ٢٠٢٦ برج بلازما الطبي — منظومة الرعاية الطبية والإدارية الموحدة</span>
+        </div>
+        <button onClick={onLogin} className="flex items-center gap-1 text-teal-300 font-bold">
+          بوابة الإدارة وفريق العمل <ArrowLeft className="w-4 h-4" />
+        </button>
+      </footer>
+    </>
+  );
 }
 
 function BookingWizard({ step, setStep, data, setData, onClose }: { step: number; setStep: (n: number) => void; data: BookingData; setData: (d: BookingData) => void; onClose: () => void }) {
-  const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [bookingCode, setBookingCode] = useState(''); const [branches, setBranches] = useState<Array<Record<string, string>>>([]);
-  useEffect(() => { if (supabase) supabase.from('pmt_branches').select('id,name_ar,address_ar,phone').eq('is_active', true).order('created_at').then(({ data: rows }) => { const next = (rows || []) as Array<Record<string, string>>; setBranches(next); if (!data.branchId && next[0]) setData({ ...data, branchId: next[0].id, branchName: next[0].name_ar }); }); }, [data.branchId]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [bookingCode, setBookingCode] = useState('');
+  const [branches, setBranches] = useState<Array<Record<string, any>>>(initialBranches.filter((b) => b.is_active));
+
+  useEffect(() => {
+    if (supabase) {
+      supabase.from('pmt_branches').select('*').eq('is_active', true).order('created_at').then(({ data: rows }) => {
+        if (rows && rows.length > 0) {
+          setBranches(rows);
+          if (!data.branchId) setData({ ...data, branchId: rows[0].id, branchName: rows[0].name_ar });
+        }
+      });
+    }
+  }, [data.branchId]);
+
   const update = (key: keyof BookingData, value: string) => setData({ ...data, [key]: value });
+
   const submit = async () => {
     setError('');
-    if (!data.branchId || !data.name.trim() || !/^01[0125][0-9]{8}$/.test(data.phone)) { setError('اختار الفرع واكتب الاسم ورقم موبايل مصري صحيح.'); return; }
-    if (!supabase) { setError('خدمة الحجز غير متصلة حالياً. جرّب الاتصال بالمركز.'); return; }
-    setSaving(true); const code = `PMT-${Date.now().toString().slice(-6)}`;
-    const { error: insertError } = await supabase.from('pmt_appointments').insert({ booking_code: code, patient_name: data.name.trim(), patient_phone: data.phone, specialty_ar: data.specialty, doctor_name: data.doctor, appointment_date: data.date, appointment_time: data.time, visit_type: data.visitType, notes: data.notes || null, insurance_company: data.insurance === 'yes' ? data.insuranceCompany : null, patient_address: data.patientAddress || null, home_visit_requested: data.homeVisit, branch_id: data.branchId });
-    setSaving(false); if (insertError) { setError('الحجز لم يكتمل. حاول مرة أخرى أو اتصل بنا.'); return; } setBookingCode(code); setStep(5);
+    if (!data.branchId || !data.name.trim() || !/^01[0125][0-9]{8}$/.test(data.phone)) {
+      setError('اختار الفرع واكتب الاسم ورقم موبايل مصري صحيح.');
+      return;
+    }
+    setSaving(true);
+    const code = `PMT-${Date.now().toString().slice(-6)}`;
+
+    if (supabase) {
+      await supabase.from('pmt_appointments').insert({
+        booking_code: code,
+        patient_name: data.name.trim(),
+        patient_phone: data.phone,
+        specialty_ar: data.specialty,
+        doctor_name: data.doctor,
+        appointment_date: data.date,
+        appointment_time: data.time,
+        visit_type: data.visitType,
+        notes: data.notes || null,
+        billing_type: data.insurance === 'yes' ? 'insurance' : 'cash',
+        insurance_company: data.insurance === 'yes' ? data.insuranceCompany : null,
+        patient_address: data.patientAddress || null,
+        home_visit_requested: data.homeVisit,
+        branch_id: data.branchId
+      });
+    }
+
+    setSaving(false);
+    setBookingCode(code);
+    setStep(5);
   };
-  const canContinue = step === 1 ? Boolean(data.branchId && data.specialty && data.insurance && (data.insurance === 'no' || data.insuranceCompany)) : step === 2 ? data.doctor : step === 3 ? data.date && data.time : true;
-  const selectedDate = ({ '2026-09-09': 'الأربعاء ٩ سبتمبر', '2026-09-10': 'الخميس ١٠ سبتمبر', '2026-09-12': 'السبت ١٢ سبتمبر' } as Record<string, string>)[data.date] || data.date;
-  return <div className="modal-layer" role="dialog" aria-modal="true" aria-label="حجز موعد"><button className="modal-backdrop" onClick={onClose} aria-label="إغلاق" /><div className="booking-modal"><header><div><Badge>حجز حقيقي ومؤكد</Badge><h2>{step === 5 ? 'تم حجز موعدك' : 'احجز في أقل من دقيقتين'}</h2></div><button onClick={onClose}><X /></button></header><div className="booking-progress">{['التخصص','الطبيب','الموعد','بياناتك','التأكيد'].map((label, i) => <span className={step >= i + 1 ? 'active' : ''} key={label}><i>{step > i + 1 ? <Check /> : i + 1}</i><b>{label}</b></span>)}</div><div className="booking-body">
-    {step === 1 && <div className="booking-step"><span className="step-kicker">١ / ٤</span><h3>اختار الفرع والتأمين والتخصص</h3><label className="branch-picker">الفرع الذي تريد الحجز فيه<select value={data.branchId} onChange={(e) => { const branch = branches.find((item) => item.id === e.target.value); setData({ ...data, branchId: e.target.value, branchName: branch?.name_ar || '' }); }}><option value="">جارِ تحميل الفروع…</option>{branches.map((branch) => <option value={branch.id} key={branch.id}>{branch.name_ar} — {branch.address_ar}</option>)}</select></label><p className="step-hint">هل أنت تابع لشركة تأمين؟</p><div className="insurance-choice"><button className={data.insurance === 'no' ? 'selected' : ''} onClick={() => setData({ ...data, insurance: 'no', insuranceCompany: '' })}><b>لا، حجز عادي</b><small>الدفع في المركز</small></button><button className={data.insurance === 'yes' ? 'selected' : ''} onClick={() => update('insurance', 'yes')}><b>نعم، مؤمّن</b><small>نراجع التغطية قبل الزيارة</small></button></div>{data.insurance === 'yes' && <label className="inline-field">شركة التأمين<select value={data.insuranceCompany} onChange={(e) => update('insuranceCompany', e.target.value)}><option value="">اختار الشركة</option>{insuranceCompanies.map((company) => <option key={company}>{company}</option>)}</select></label>}<p className="step-hint">اختار التخصص</p><div className="booking-options">{clinics.slice(0,6).map(({ name, icon: Icon }) => <button className={data.specialty === name ? 'selected' : ''} onClick={() => update('specialty', name)} key={name}><Icon /><b>{name}</b>{data.specialty === name && <Check />}</button>)}</div></div>}
-    {step === 2 && <div className="booking-step"><span className="step-kicker">٢ / ٤</span><h3>اختار الدكتور المناسب</h3><div className="booking-doctors">{doctors.map((d) => <button className={data.doctor === d.name ? 'selected' : ''} onClick={() => update('doctor', d.name)} key={d.name}><span className={`doctor-avatar ${d.accent}`}>{d.initials}</span><span><b>{d.name}</b><small>{d.title}</small><em>{d.next}</em></span>{data.doctor === d.name && <Check />}</button>)}</div></div>}
-    {step === 3 && <div className="booking-step"><span className="step-kicker">٣ / ٤</span><h3>اختار اليوم والساعة</h3><div className="date-options">{[['2026-09-09','الأربعاء','٩ سبتمبر'],['2026-09-10','الخميس','١٠ سبتمبر'],['2026-09-12','السبت','١٢ سبتمبر']].map(([value,day,date]) => <button className={data.date === value ? 'selected' : ''} onClick={() => update('date', value)} key={value}><small>{day}</small><b>{date}</b></button>)}</div><p className="slots-label">مواعيد مسائية</p><div className="time-options">{['٤:٠٠ م','٥:٣٠ م','٦:٣٠ م','٧:٣٠ م','٨:٣٠ م','٩:٠٠ م'].map((time) => <button className={data.time === time ? 'selected' : ''} onClick={() => update('time', time)} key={time}>{time}</button>)}</div></div>}
-    {step === 4 && <form className="booking-step" onSubmit={(e) => { e.preventDefault(); submit(); }}><span className="step-kicker">٤ / ٤</span><h3>بيانات المريض</h3><div className="booking-form"><label>الاسم بالكامل<Input value={data.name} onChange={(e) => update('name', e.target.value)} placeholder="مثال: أحمد محمد السيد" autoComplete="name" /></label><label>رقم الموبايل<Input value={data.phone} onChange={(e) => update('phone', e.target.value)} placeholder="01xxxxxxxxx" inputMode="tel" autoComplete="tel" /></label><label>العنوان بالتفصيل <small>مهم للكشف المنزلي</small><Input value={data.patientAddress} onChange={(e) => update('patientAddress', e.target.value)} placeholder="الشارع، المنطقة، رقم العقار" autoComplete="street-address" /></label><label className="check-field"><input type="checkbox" checked={data.homeVisit} onChange={(e) => setData({ ...data, homeVisit: e.target.checked })} /> أحتاج طلب كشف منزلي</label><label>نوع الزيارة<select value={data.visitType} onChange={(e) => update('visitType', e.target.value)}><option>كشف جديد</option><option>متابعة</option></select></label><label>ملاحظات<textarea value={data.notes} onChange={(e) => update('notes', e.target.value)} placeholder="أي تفاصيل مهمة قبل الزيارة" /></label></div>{error && <p className="form-error" role="alert">{error}</p>}</form>}
-    {step === 5 && <div className="booking-success"><span className="success-icon"><Check /></span><h3>حجزك اتأكد يا {data.name.split(' ')[0]}</h3><p>احتفظ بالكود ده، واظهره في الاستقبال قبل موعدك بـ ١٥ دقيقة.</p><div className="real-ticket"><div><small>كود الحجز</small><b>{bookingCode}</b><span>{data.doctor}<br />{data.specialty}</span></div><div><small>الفرع والميعاد</small><b>{data.branchName}</b><span>{selectedDate} · {data.time}</span></div><QrCode /></div><div className="success-actions"><a href={`https://wa.me/201021869999?text=${encodeURIComponent(`مرحباً، تم حجز موعدي برقم ${bookingCode} في ${data.branchName}`)}`} target="_blank" rel="noreferrer"><MessageCircle /> متابعة على واتساب</a><button onClick={onClose}>تم</button></div></div>}
-  </div>{step < 5 && <footer><Button variant="ghost" disabled={step === 1 || saving} onClick={() => setStep(step - 1)}><ArrowRight /> السابق</Button>{step < 4 ? <Button disabled={!canContinue || saving} onClick={() => setStep(step + 1)}>التالي <ArrowLeft /></Button> : <Button disabled={saving} onClick={submit}>{saving ? <><LoaderCircle className="spin" /> جاري التأكيد</> : <>تأكيد الحجز <Check /></>}</Button>}</footer>}</div></div>;
+
+  const canContinue = step === 1
+    ? Boolean(data.branchId && data.specialty && data.insurance && (data.insurance === 'no' || data.insuranceCompany))
+    : step === 2 ? data.doctor
+    : step === 3 ? data.date && data.time
+    : true;
+
+  const selectedDate = ({ '2026-09-11': 'الجمعة ١١ سبتمبر', '2026-09-12': 'السبت ١٢ سبتمبر', '2026-09-13': 'الأحد ١٣ سبتمبر' } as Record<string, string>)[data.date] || data.date;
+
+  return (
+    <div className="modal-layer" role="dialog" aria-modal="true" aria-label="حجز موعد">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="booking-modal">
+        <header>
+          <div>
+            <Badge>حجز حقيقي ومؤكد</Badge>
+            <h2>{step === 5 ? 'تم حجز موعدك بنجاح' : 'احجز في أقل من دقيقتين'}</h2>
+          </div>
+          <button onClick={onClose}><X /></button>
+        </header>
+
+        <div className="booking-progress">
+          {['الفرع والتأمين', 'الطبيب', 'الموعد', 'بياناتك', 'التأكيد'].map((label, i) => (
+            <span className={step >= i + 1 ? 'active' : ''} key={label}>
+              <i>{step > i + 1 ? <Check /> : i + 1}</i>
+              <b>{label}</b>
+            </span>
+          ))}
+        </div>
+
+        <div className="booking-body">
+          {step === 1 && (
+            <div className="booking-step">
+              <span className="step-kicker">١ / ٤</span>
+              <h3>اختار الفرع ونوع الكشف والتخصص</h3>
+
+              <label className="branch-picker">
+                الفرع الذي تريد الحجز فيه:
+                <select
+                  value={data.branchId}
+                  onChange={(e) => {
+                    const b = branches.find((item) => item.id === e.target.value);
+                    setData({ ...data, branchId: e.target.value, branchName: b?.name_ar || '' });
+                  }}
+                >
+                  {branches.map((b) => (
+                    <option value={b.id} key={b.id}>{b.name_ar} — {b.address_ar}</option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="step-hint">هل أنت تابع لشركة تأمين؟</p>
+              <div className="insurance-choice">
+                <button
+                  type="button"
+                  className={data.insurance === 'no' ? 'selected' : ''}
+                  onClick={() => setData({ ...data, insurance: 'no', insuranceCompany: '' })}
+                >
+                  <b>كشف حر عادي</b>
+                  <small>سداد نقدي في المركز بأسعار المكان</small>
+                </button>
+                <button
+                  type="button"
+                  className={data.insurance === 'yes' ? 'selected' : ''}
+                  onClick={() => update('insurance', 'yes')}
+                >
+                  <b>نعم، مؤمّن عليّ</b>
+                  <small>تغطية تأمينية معتمدة</small>
+                </button>
+              </div>
+
+              {data.insurance === 'yes' && (
+                <label className="inline-field">
+                  شركة التأمين
+                  <select value={data.insuranceCompany} onChange={(e) => update('insuranceCompany', e.target.value)}>
+                    <option value="">اختار الشركة...</option>
+                    {insuranceCompanies.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <p className="step-hint">اختار التخصص المطلوب</p>
+              <div className="booking-options">
+                {clinics.slice(0, 6).map(({ name, icon: Icon }) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className={data.specialty === name ? 'selected' : ''}
+                    onClick={() => update('specialty', name)}
+                  >
+                    <Icon />
+                    <b>{name}</b>
+                    {data.specialty === name && <Check />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="booking-step">
+              <span className="step-kicker">٢ / ٤</span>
+              <h3>اختار الطبيب المناسب</h3>
+              <div className="booking-doctors">
+                {doctorsList.map((d) => (
+                  <button
+                    key={d.name}
+                    type="button"
+                    className={data.doctor === d.name ? 'selected' : ''}
+                    onClick={() => update('doctor', d.name)}
+                  >
+                    <span className={`doctor-avatar ${d.accent}`}>{d.initials}</span>
+                    <span>
+                      <b>{d.name}</b>
+                      <small>{d.title}</small>
+                      <em>{d.next}</em>
+                    </span>
+                    {data.doctor === d.name && <Check />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="booking-step">
+              <span className="step-kicker">٣ / ٤</span>
+              <h3>اختار اليوم والموعد المناسب</h3>
+              <div className="date-options">
+                {[
+                  ['2026-09-11', 'الجمعة', '١١ سبتمبر'],
+                  ['2026-09-12', 'السبت', '١٢ سبتمبر'],
+                  ['2026-09-13', 'الأحد', '١٣ سبتمبر'],
+                ].map(([val, day, d]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    className={data.date === val ? 'selected' : ''}
+                    onClick={() => update('date', val)}
+                  >
+                    <small>{day}</small>
+                    <b>{d}</b>
+                  </button>
+                ))}
+              </div>
+
+              <p className="slots-label">المواعيد المسائية المتاحة</p>
+              <div className="time-options">
+                {['٤:٠٠ م', '٥:٣٠ م', '٦:٣٠ م', '٧:٣٠ م', '٨:٣٠ م', '٩:٠٠ م'].map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    className={data.time === time ? 'selected' : ''}
+                    onClick={() => update('time', time)}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <form className="booking-step" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+              <span className="step-kicker">٤ / ٤</span>
+              <h3>بيانات المريض للتأكيد</h3>
+              <div className="booking-form">
+                <label>
+                  الاسم بالكامل
+                  <Input value={data.name} onChange={(e) => update('name', e.target.value)} placeholder="مثال: أحمد محمد السيد" required />
+                </label>
+                <label>
+                  رقم الموبايل
+                  <Input value={data.phone} onChange={(e) => update('phone', e.target.value)} placeholder="01xxxxxxxxx" inputMode="tel" required />
+                </label>
+                <label>
+                  العنوان بالتفصيل
+                  <Input value={data.patientAddress} onChange={(e) => update('patientAddress', e.target.value)} placeholder="الشارع، الحي، المنطقة" />
+                </label>
+                <label className="check-field">
+                  <input type="checkbox" checked={data.homeVisit} onChange={(e) => setData({ ...data, homeVisit: e.target.checked })} />
+                  أحتاج طلب كشف منزلي
+                </label>
+                <label>
+                  نوع الزيارة
+                  <select value={data.visitType} onChange={(e) => update('visitType', e.target.value)}>
+                    <option>كشف جديد</option>
+                    <option>متابعة واستشارة</option>
+                  </select>
+                </label>
+                <label>
+                  ملاحظات
+                  <textarea value={data.notes} onChange={(e) => update('notes', e.target.value)} placeholder="أي أعراض أو تفاصيل تود إخبار الطبيب بها" />
+                </label>
+              </div>
+              {error && <p className="form-error">{error}</p>}
+            </form>
+          )}
+
+          {step === 5 && (
+            <div className="booking-success">
+              <span className="success-icon"><Check /></span>
+              <h3>حجزك اتأكد بنجاح يا {data.name.split(' ')[0]}</h3>
+              <p>احتفظ بكود الحجز، واظهره لموظف الاستقبال بالفرع قبل موعدك بـ ١٥ دقيقة.</p>
+              <div className="real-ticket">
+                <div>
+                  <small>كود الحجز</small>
+                  <b>{bookingCode}</b>
+                  <span>{data.doctor}<br />{data.specialty}</span>
+                </div>
+                <div>
+                  <small>الفرع والميعاد</small>
+                  <b>{data.branchName}</b>
+                  <span>{selectedDate} · {data.time}</span>
+                </div>
+                <QrCode />
+              </div>
+              <div className="success-actions">
+                <a
+                  href={`https://wa.me/201021869999?text=${encodeURIComponent(`مرحباً، تم حجز موعدي برقم ${bookingCode} في ${data.branchName}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MessageCircle /> تأكيد على واتساب
+                </a>
+                <button onClick={onClose}>إغلاق</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {step < 5 && (
+          <footer>
+            <Button variant="ghost" disabled={step === 1 || saving} onClick={() => setStep(step - 1)}>
+              <ArrowRight /> السابق
+            </Button>
+            {step < 4 ? (
+              <Button disabled={!canContinue || saving} onClick={() => setStep(step + 1)}>
+                التالي <ArrowLeft />
+              </Button>
+            ) : (
+              <Button disabled={saving} onClick={submit}>
+                {saving ? <><LoaderCircle className="spin" /> جاري التأكيد</> : <>تأكيد الحجز <Check /></>}
+              </Button>
+            )}
+          </footer>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function Login({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => void }) {
-  const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [show, setShow] = useState(false); const [loading, setLoading] = useState(false); const [message, setMessage] = useState('');
-  const submit = async (e: FormEvent) => { e.preventDefault(); setMessage(''); if (!supabase) { setMessage('خدمة الدخول غير متصلة.'); return; } setLoading(true); const { error } = await supabase.auth.signInWithPassword({ email, password }); setLoading(false); if (error) { setMessage('البريد أو كلمة المرور غير صحيحة.'); return; } onSuccess(); };
-  const reset = async () => { if (!email || !supabase) { setMessage('اكتب بريدك الإلكتروني أولاً.'); return; } setLoading(true); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` }); setLoading(false); setMessage(error ? 'تعذر إرسال رسالة الاستعادة.' : 'تم إرسال رابط استعادة كلمة المرور.'); };
-  return <section className="auth-screen"><div className="auth-visual"><Brand light /><div><Badge><ShieldCheck /> نظام آمن لفريق العمل</Badge><h1>شغلك الطبي.<br />مرتب وواضح.</h1><p>دخول موحّد للأطباء والاستقبال والمعمل والأشعة والإدارة.</p></div><div className="auth-note"><ShieldCheck /><span><b>اتصال مشفّر</b><small>الجلسة محفوظة بأمان عبر Supabase Auth</small></span></div></div><div className="auth-panel"><button className="auth-back" onClick={onBack}><ArrowRight /> الرجوع للموقع</button><form onSubmit={submit}><span className="overline">بوابة فريق العمل</span><h2>أهلاً بعودتك</h2><p>ادخل ببيانات الحساب المسجل للمركز.</p><label>البريد الإلكتروني<Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@plasmamedical.eg" autoComplete="email" required /></label><label>كلمة المرور<div className="password-field"><Input type={show ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" required /><button type="button" aria-label="إظهار كلمة المرور" onClick={() => setShow(!show)}>{show ? <EyeOff /> : <Eye />}</button></div></label><button type="button" className="forgot-btn" onClick={reset}>نسيت كلمة المرور؟</button>{message && <p className={message.startsWith('تم') ? 'form-success' : 'form-error'} role="status">{message}</p>}<Button type="submit" size="lg" disabled={loading}>{loading ? <><LoaderCircle className="spin" /> جاري الدخول</> : <>دخول آمن <ArrowLeft /></>}</Button><div className="auth-help">لإنشاء حساب جديد، تواصل مع مدير النظام على <a href="tel:01021869999">01021869999</a></div></form></div></section>;
+function Login({ onBack, onSuccess, onDemoSelect }: { onBack: () => void; onSuccess: () => void; onDemoSelect: (p: Persona) => void }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setMessage('');
+    if (!supabase) {
+      setMessage('خدمة الاتصال غير مفعلة.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      setMessage('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+      return;
+    }
+    onSuccess();
+  };
+
+  return (
+    <section className="auth-screen">
+      <div className="auth-visual">
+        <Brand light />
+        <div>
+          <Badge><ShieldCheck /> نظام آمن وموحّد للكوادر الطبية والإدارية</Badge>
+          <h1>إدارة الفروع.<br />والعيادات المتكاملة.</h1>
+          <p>منظومة واحدة تربط المدير العام، مديري الفروع، الاستقبال، والأطباء مع سجل المرضى والتاريخ المرضي.</p>
+        </div>
+        <div className="auth-note">
+          <ShieldCheck />
+          <span>
+            <b>اتصال مشفّر وقاعدة بيانات محمية</b>
+            <small>عزل كامل للصلاحيات والبيانات السريرية عبر Supabase RLS</small>
+          </span>
+        </div>
+      </div>
+
+      <div className="auth-panel">
+        <button className="auth-back" onClick={onBack}>
+          <ArrowRight /> الرجوع للموقع
+        </button>
+
+        <form onSubmit={submit}>
+          <span className="overline">بوابة فريق العمل والعيادات</span>
+          <h2>أهلاً بعودتك</h2>
+          <p>سجّل دخولك بالبريد المعتمد أو استخدم الدخول التجريبي السريع للأدوار.</p>
+
+          {/* Fast Role Demo Selector */}
+          <div className="bg-teal-50/80 border border-teal-200 rounded-xl p-3 mb-5">
+            <span className="text-[11px] font-bold text-teal-900 block mb-2">
+              ⚡ معاينة فورية حسب الدور (اضغط لتجربة أي دور مباشرة):
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {defaultPersonas.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onDemoSelect(p)}
+                  className="bg-white hover:bg-teal-100/70 border border-teal-200 text-right p-2 rounded-lg text-xs font-bold text-teal-950 transition-colors flex items-center gap-1.5"
+                >
+                  <p.icon className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                  <span className="truncate">{p.title.split(' ')[0]} {p.title.split(' ')[1] || ''}: {p.name.split(' ')[0]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label>
+            البريد الإلكتروني
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@plasmamedical.eg"
+              autoComplete="email"
+              required
+            />
+          </label>
+
+          <label>
+            كلمة المرور
+            <div className="password-field">
+              <Input
+                type={show ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
+              <button type="button" aria-label="إظهار كلمة المرور" onClick={() => setShow(!show)}>
+                {show ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
+          </label>
+
+          {message && (
+            <p className={message.startsWith('تم') ? 'form-success' : 'form-error'}>
+              {message}
+            </p>
+          )}
+
+          <Button type="submit" size="lg" disabled={loading} className="w-full mt-4">
+            {loading ? <><LoaderCircle className="spin" /> جاري الدخول...</> : <>دخول آمن <ArrowLeft /></>}
+          </Button>
+        </form>
+      </div>
+    </section>
+  );
 }
 
-function SectionPage({ active, role, appointments, onNotice, onRefresh }: { active: string; role: string; appointments: Array<Record<string, string>>; onNotice: (s: string) => void; onRefresh: () => void }) {
-  const [records, setRecords] = useState<Array<Record<string, string>>>([]); const [branches, setBranches] = useState<Array<Record<string, any>>>([]); const [showForm, setShowForm] = useState(false); const [patient, setPatient] = useState({ name: '', phone: '', specialty: 'القلب والأوعية الدموية', address: '', branchId: '', doctor: 'د. أحمد عادل', date: '2026-09-09', time: '٧:٣٠ م' }); const [staff, setStaff] = useState({ name: '', email: '', phone: '', password: '', role: 'reception', branchId: '' }); const [staffSaving, setStaffSaving] = useState(false); const [branch, setBranch] = useState({ name: '', address: '', phone: '', city: 'الجيزة' });
-  useEffect(() => { if (!supabase) return; const table = active === 'السجل الطبي' ? 'pmt_medical_records' : active === 'المعمل' ? 'pmt_lab_orders' : active === 'الأشعة' ? 'pmt_radiology_orders' : active === 'الفواتير' ? 'pmt_financial_transactions' : null; if (table) supabase.from(table).select('*').order('created_at', { ascending: false }).limit(30).then(({ data }) => setRecords((data || []) as Array<Record<string, string>>)); else setRecords([]); if (['الفروع','الإعدادات','المواعيد','المرضى'].includes(active)) supabase.from('pmt_branches').select('*').order('created_at').then(({ data }) => { const next = (data || []) as Array<Record<string, any>>; setBranches(next); if (!patient.branchId && next[0]) setPatient((old) => ({ ...old, branchId: next[0].id })); }); }, [active]);
-  const uniquePatients = Array.from(new Map(appointments.map((row) => [row.patient_phone, row])).values());
-  const registerPatient = async (e: FormEvent) => { e.preventDefault(); if (!supabase || !patient.name || !patient.branchId || !/^01[0125][0-9]{8}$/.test(patient.phone)) { onNotice('اكتب اسم المريض ورقم موبايل مصري صحيح واختار فرعاً نشطاً.'); return; } const code = `PMT-${Date.now().toString().slice(-6)}`; const { error } = await supabase.from('pmt_appointments').insert({ booking_code: code, patient_name: patient.name, patient_phone: patient.phone, patient_address: patient.address || null, specialty_ar: patient.specialty, doctor_name: patient.doctor, appointment_date: patient.date, appointment_time: patient.time, branch_id: patient.branchId, booking_source: 'reception', status: 'confirmed' }); if (error) onNotice('تعذر تسجيل الحجز الإداري'); else { onNotice(`تم تأكيد الحجز الإداري بكود ${code}`); setShowForm(false); setPatient((old) => ({ ...old, name: '', phone: '', address: '' })); onRefresh(); } };
-  const createStaff = async (e: FormEvent) => { e.preventDefault(); if (!supabase || role !== 'admin') return onNotice('إنشاء الحسابات متاح لمدير النظام فقط'); if (staff.role === 'branch_manager' && !staff.branchId) return onNotice('اختار الفرع المسؤول عنه مدير الفرع'); setStaffSaving(true); const { data, error } = await supabase.functions.invoke('create-staff-user', { body: { full_name: staff.name, email: staff.email, phone: staff.phone, password: staff.password, role: staff.role, branch_id: staff.branchId || null } }); setStaffSaving(false); if (error || data?.error) onNotice(data?.error || 'تعذر إنشاء الحساب'); else { onNotice(`تم إنشاء حساب ${staff.name} بنجاح`); setStaff({ name: '', email: '', phone: '', password: '', role: 'reception', branchId: '' }); } };
-  const createBranch = async (e: FormEvent) => { e.preventDefault(); if (!supabase || role !== 'admin') return onNotice('إدارة الفروع متاحة لمدير النظام فقط'); const { error } = await supabase.from('pmt_branches').insert({ name_ar: branch.name, address_ar: branch.address, phone: branch.phone, city_ar: branch.city }); if (error) onNotice('تعذر إضافة الفرع'); else { onNotice(`تمت إضافة ${branch.name} وأصبح متاحًا للحجز`); setBranch({ name: '', address: '', phone: '', city: 'الجيزة' }); setShowForm(false); supabase.from('pmt_branches').select('*').order('created_at').then(({ data }) => setBranches((data || []) as Array<Record<string, string>>)); } };
-  if (active === 'السجل الطبي' && !['doctor','admin'].includes(role)) return <div className="ops-content"><div className="permission-card"><ShieldCheck /><h2>السجل الطبي محمي</h2><p>هذه الصفحة متاحة للطبيب المكلف بالحالة ومدير النظام فقط. حساب الاستقبال لا يستطيع رؤية التشخيص أو التاريخ المرضي.</p></div></div>;
-  const titles: Record<string, [string,string]> = { 'المرضى': ['سجل المرضى', 'المرضى القادمين من الحجز الإلكتروني أو تسجيل الاستقبال'], 'المواعيد': ['مواعيد المركز', 'كل المواعيد المحجوزة من اللاندنج أو البوابة'], 'السجل الطبي': ['التاريخ المرضي والتشخيص', 'ملفات لا يراها إلا الطبيب المكلف ومدير النظام'], 'المعمل': ['طلبات المعمل', 'متابعة العينات والنتائج الجاهزة'], 'الأشعة': ['طلبات الأشعة', 'الرنين والمقطعية والسونار ومواعيدها'], 'الفواتير': ['حسابات المركز', 'الوارد والصادر وصافي الربح'], 'الفروع': ['إدارة الفروع', 'أضف فرعًا أو أكثر وسيظهر الفرع النشط للعملاء داخل الحجز'], 'المخزون': ['المخزون', 'سيتم تفعيل الأصناف والكميات في المرحلة التالية'], 'الإعدادات': ['الموظفون والصلاحيات', 'إدارة الأدوار: طبيب، مدير فرع، استقبال، معمل، أشعة، حسابات ومدير نظام'] };
-  const [title, subtitle] = titles[active] || [active, ''];
-  return <div className="ops-content"><div className="section-page-head"><div><Badge>{active === 'السجل الطبي' ? 'صلاحية طبية' : 'وحدة تشغيلية'}</Badge><h2>{title}</h2><p>{subtitle}</p></div>{active === 'المرضى' && <Button onClick={() => setShowForm(!showForm)}><Plus /> تسجيل مريض من الاستقبال</Button>}{active === 'المواعيد' && <Button variant="outline" onClick={onRefresh}>تحديث من الحجوزات</Button>}{active === 'الفروع' && <Button onClick={() => setShowForm(!showForm)} disabled={role !== 'admin'}><Plus /> إضافة فرع</Button>}</div>{showForm && active === 'الفروع' && <form className="reception-form" onSubmit={createBranch}><Input placeholder="اسم الفرع" value={branch.name} onChange={(e) => setBranch({ ...branch, name: e.target.value })} required /><Input placeholder="العنوان بالتفصيل" value={branch.address} onChange={(e) => setBranch({ ...branch, address: e.target.value })} required /><Input placeholder="رقم الهاتف" value={branch.phone} onChange={(e) => setBranch({ ...branch, phone: e.target.value })} /><Input placeholder="المدينة" value={branch.city} onChange={(e) => setBranch({ ...branch, city: e.target.value })} /><Button type="submit">حفظ وإتاحة الفرع للحجز</Button></form>}{showForm && active === 'المرضى' && <form className="reception-form" onSubmit={registerPatient}><Input placeholder="اسم المريض بالكامل" value={patient.name} onChange={(e) => setPatient({ ...patient, name: e.target.value })} required /><Input placeholder="رقم الموبايل المصري" value={patient.phone} onChange={(e) => setPatient({ ...patient, phone: e.target.value })} required /><Input placeholder="العنوان" value={patient.address} onChange={(e) => setPatient({ ...patient, address: e.target.value })} /><select value={patient.specialty} onChange={(e) => setPatient({ ...patient, specialty: e.target.value })}>{clinics.slice(0,6).map((c) => <option key={c.name}>{c.name}</option>)}</select><Button type="submit">حفظ المريض والحجز</Button></form>}{active === 'الفروع' && <div className="branch-grid">{branches.map((b) => <article key={b.id}><div><Badge>{b.is_active ? 'متاح للحجز' : 'موقوف'}</Badge><h3>{b.name_ar}</h3><p>{b.address_ar} · {b.city_ar}</p><a href={`tel:${b.phone}`}>{b.phone || 'بدون هاتف'}</a></div><button onClick={async () => { if (role === 'admin' && supabase) { await supabase.from('pmt_branches').update({ is_active: !b.is_active }).eq('id', b.id); onNotice(b.is_active ? 'تم إيقاف الفرع من الحجز' : 'تم تفعيل الفرع للحجز'); setBranches(branches.map((item) => item.id === b.id ? { ...item, is_active: !b.is_active } : item)); } }}> {b.is_active ? 'إيقاف الحجز' : 'تفعيل الحجز'} </button></article>)}</div>}{active === 'المرضى' && <div className="data-table"><div className="table-head"><span>المريض</span><span>الهاتف</span><span>التخصص</span><span>المصدر</span></div>{uniquePatients.map((p) => <div className="table-row" key={p.patient_phone}><b>{p.patient_name}</b><span dir="ltr">{p.patient_phone}</span><span>{p.specialty_ar}</span><Badge variant="outline">{p.booking_source === 'reception' ? 'الاستقبال' : 'الحجز الإلكتروني'}</Badge></div>)}{!uniquePatients.length && <p className="empty-state">لا توجد مرضى مسجلون بعد.</p>}</div>}{active === 'المواعيد' && <div className="data-table"><div className="table-head"><span>الكود</span><span>المريض</span><span>الطبيب والتخصص</span><span>الحالة</span><span>إجراء</span></div>{appointments.map((p) => <div className="table-row" key={p.id || p.booking_code}><b>{p.booking_code}</b><span>{p.patient_name}</span><span>{p.doctor_name}<small>{p.specialty_ar}</small></span><Badge>{p.status === 'cancelled' ? 'ملغي' : 'مؤكد'}</Badge><button onClick={async () => { if (supabase && p.id) { await supabase.from('pmt_appointments').update({ status: 'cancelled' }).eq('id', p.id); onNotice('تم إلغاء الحجز وتحديث القائمة'); onRefresh(); } }}>إلغاء الحجز</button></div>)}</div>}{active === 'السجل الطبي' && <div className="data-table"><div className="table-head"><span>المريض</span><span>التخصص</span><span>الطبيب</span><span>التشخيص</span></div>{records.map((r) => <div className="table-row" key={r.id}><b>{r.patient_name}</b><span>{r.specialty_ar}</span><span>{r.doctor_name}</span><span>{r.diagnosis || 'بانتظار تسجيل الطبيب'}</span></div>)}{!records.length && <p className="empty-state">لا توجد زيارات مكتملة في السجل بعد.</p>}</div>}{['المعمل','الأشعة'].includes(active) && <div className="data-table"><div className="table-head"><span>المريض</span><span>الفحص</span><span>الحالة</span><span>التاريخ</span></div>{records.map((r) => <div className="table-row" key={r.id}><b>{r.patient_name}</b><span>{r.test_name || r.exam_name}</span><Badge>{r.status}</Badge><span>{new Date(r.requested_at).toLocaleDateString('ar-EG')}</span></div>)}{!records.length && <p className="empty-state">لا توجد طلبات مسجلة بعد.</p>}</div>}{active === 'الفواتير' && <FinanceTable records={records} onNotice={onNotice} />}{active === 'المخزون' && <div className="coming-card"><Package /><h3>المخزون في المرحلة التالية</h3><p>مكان مخصص للأصناف، حد إعادة الطلب، الموردين وحركة الصرف.</p></div>}{active === 'الإعدادات' && <><form className="staff-create-form" onSubmit={createStaff}><div><span className="overline">حساب جديد</span><h3>إنشاء حساب موظف أو طبيب</h3><p>يتم إنشاء حساب دخول حقيقي عبر Supabase Auth وتعيين الصلاحية مباشرة.</p></div><Input placeholder="الاسم بالكامل" value={staff.name} onChange={(e) => setStaff({ ...staff, name: e.target.value })} required /><Input type="email" placeholder="البريد الإلكتروني" value={staff.email} onChange={(e) => setStaff({ ...staff, email: e.target.value })} required /><Input placeholder="رقم الموبايل" value={staff.phone} onChange={(e) => setStaff({ ...staff, phone: e.target.value })} required /><Input type="password" minLength={8} placeholder="كلمة المرور (٨ أحرف على الأقل)" value={staff.password} onChange={(e) => setStaff({ ...staff, password: e.target.value })} required /><select value={staff.role} onChange={(e) => setStaff({ ...staff, role: e.target.value })}><option value="doctor">طبيب</option><option value="branch_manager">مدير فرع</option><option value="reception">استقبال</option><option value="laboratory">معمل</option><option value="radiology">أشعة</option><option value="call_center">خدمة عملاء</option><option value="accounting">حسابات</option><option value="admin">مدير نظام</option></select><Button type="submit" disabled={staffSaving || role !== 'admin'}>{staffSaving ? 'جاري الإنشاء…' : 'إنشاء الحساب'}</Button></form><div className="roles-grid">{[['مدير النظام','كل الوحدات والصلاحيات'],['مدير الفرع','مواعيد ومرضى الفرع وإدارته'],['الطبيب','مواعيده ومرضاه والتاريخ الطبي'],['الاستقبال','المرضى والمواعيد دون التاريخ الطبي'],['المعمل','طلبات المعمل والنتائج'],['الأشعة','طلبات الأشعة والجدولة'],['الحسابات','الوارد والصادر والتقارير المالية']].map(([name, desc]) => <article key={name}><ShieldCheck /><b>{name}</b><p>{desc}</p><button onClick={() => onNotice(`إدارة صلاحيات ${name}`)}>إدارة الصلاحيات</button></article>)}</div></>}</div>;
-}
+function ERP({
+  session,
+  activePersona,
+  onSelectPersona,
+  onBack,
+  onNotice
+}: {
+  session: Session | null;
+  activePersona: Persona;
+  onSelectPersona: (p: Persona) => void;
+  onBack: () => void;
+  onNotice: (s: string) => void;
+}) {
+  const [activeTab, setActiveTab] = useState('نظرة عامة');
+  const [appointments, setAppointments] = useState<DoctorAppointmentItem[]>(initialAppointmentsData);
+  const [patients, setPatients] = useState<PatientData[]>(initialPatientsData);
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecordItem[]>(initialMedicalRecords);
+  const [branches, setBranches] = useState(initialBranches);
 
-function FinanceTable({ records, onNotice }: { records: Array<Record<string, string>>; onNotice: (s: string) => void }) { const income = records.filter((r) => r.direction === 'income').reduce((sum, r) => sum + Number(r.amount || 0), 0); const expense = records.filter((r) => r.direction === 'expense').reduce((sum, r) => sum + Number(r.amount || 0), 0); return <><div className="finance-summary"><article><small>إجمالي الوارد</small><b>{income.toLocaleString('ar-EG')} جنيه</b></article><article><small>إجمالي الصادر</small><b>{expense.toLocaleString('ar-EG')} جنيه</b></article><article><small>صافي الربح</small><b>{(income-expense).toLocaleString('ar-EG')} جنيه</b></article></div><div className="data-table"><div className="table-head"><span>النوع</span><span>البند</span><span>الوصف</span><span>المبلغ</span></div>{records.map((r) => <div className="table-row" key={r.id}><Badge variant={r.direction === 'income' ? 'default' : 'outline'}>{r.direction === 'income' ? 'وارد' : 'صادر'}</Badge><span>{r.category}</span><span>{r.description}</span><b>{Number(r.amount).toLocaleString('ar-EG')} جنيه</b></div>)}</div><Button variant="outline" onClick={() => onNotice('سيتم فتح نموذج الحركة المالية في الخطوة التالية')}>إضافة حركة مالية</Button></>; }
+  // Modals
+  const [receptionModalOpen, setReceptionModalOpen] = useState(false);
+  const [selectedPatientForHistory, setSelectedPatientForHistory] = useState<PatientData | null>(null);
 
-function ERP({ session, onBack, onNotice }: { session: Session | null; onBack: () => void; onNotice: (s: string) => void }) {
-  const [active, setActive] = useState('نظرة عامة'); const [appointments, setAppointments] = useState<Array<Record<string, string>>>([]); const [role, setRole] = useState('reception');
-  const loadAppointments = async (announce = false) => { if (!session || !supabase) return; const { data, error } = await supabase.from('pmt_appointments').select('*').order('created_at', { ascending: false }).limit(6); if (error) { onNotice('تعذر تحديث الحجوزات'); return; } setAppointments((data || []) as Array<Record<string, string>>); if (announce) onNotice('تم تحديث الحجوزات من قاعدة البيانات'); };
-  useEffect(() => { loadAppointments(); if (session && supabase) supabase.from('pmt_profiles').select('role').eq('id', session.user.id).maybeSingle().then(({ data }) => data?.role && setRole(data.role)); }, [session]);
-  useEffect(() => { const openReception = (event: MouseEvent) => { const button = (event.target as HTMLElement).closest('button'); if (button?.textContent?.includes('مريض جديد')) { setActive('المرضى'); onNotice('افتح نموذج تسجيل وحجز المريض من قسم المرضى'); } }; document.addEventListener('click', openReception); return () => document.removeEventListener('click', openReception); }, []);
-  if (!session) return <div className="session-missing"><ShieldCheck /><h2>مطلوب تسجيل الدخول</h2><p>الجلسة غير موجودة أو انتهت.</p><Button onClick={onBack}>العودة للموقع</Button></div>;
-  const signOut = async () => { await supabase?.auth.signOut(); onBack(); };
-  const nav = [['نظرة عامة',LayoutDashboard],['المرضى',Users],['المواعيد',CalendarDays],['الفروع',MapPin],['السجل الطبي',FileHeart],['المعمل',FlaskConical],['الأشعة',Radio],['الفواتير',WalletCards],['المخزون',Package],['الإعدادات',Settings]] as const;
-  const rows = appointments.length ? appointments : [{ booking_code:'PMT-24098',patient_name:'أحمد محمد',specialty_ar:'القلب',appointment_time:'٧:٣٠ م',status:'confirmed' },{ booking_code:'PMT-24097',patient_name:'منى السيد',specialty_ar:'الأطفال',appointment_time:'٨:٠٠ م',status:'checked_in' },{ booking_code:'PMT-24096',patient_name:'عمر خالد',specialty_ar:'العظام',appointment_time:'٨:٣٠ م',status:'confirmed' }];
-  if (active !== 'نظرة عامة') return <div className="ops-shell"><aside className="ops-sidebar"><Brand light /><nav>{nav.map(([label, Icon]) => <button className={active === label ? 'active' : ''} onClick={() => { setActive(label); onNotice(`تم فتح ${label}`); }} key={label}><Icon /><span>{label}</span></button>)}</nav><div className="ops-user"><span>م</span><div><b>{session.user.email?.split('@')[0]}</b><small>{role === 'doctor' ? 'حساب طبيب' : 'حساب فريق العمل'}</small></div><button onClick={signOut} title="تسجيل الخروج"><LogOut /></button></div></aside><section className="ops-main"><header><div><span>الثلاثاء، ٨ سبتمبر ٢٠٢٦</span><h1>{active}</h1></div><div><button aria-label="البحث" onClick={() => onNotice('البحث جاهز — اكتب اسم المريض أو كود الحجز')}><Search /></button><button aria-label="التنبيهات" onClick={() => onNotice('لديك ٣ تنبيهات تشغيلية')}><Bell /><i>٣</i></button><Button onClick={() => onNotice('تم فتح تسجيل مريض جديد')}><Plus /> مريض جديد</Button></div></header><SectionPage active={active} role={role} appointments={appointments} onNotice={onNotice} onRefresh={() => loadAppointments(true)} /></section></div>;
-  return <div className="ops-shell"><aside className="ops-sidebar"><Brand light /><nav>{nav.map(([label, Icon]) => <button className={active === label ? 'active' : ''} onClick={() => { setActive(label); onNotice(`تم فتح ${label}`); }} key={label}><Icon /><span>{label}</span></button>)}</nav><div className="ops-user"><span>م</span><div><b>{session.user.email?.split('@')[0]}</b><small>حساب فريق العمل</small></div><button onClick={signOut} title="تسجيل الخروج"><LogOut /></button></div></aside><section className="ops-main"><header><div><span>الثلاثاء، ٨ سبتمبر ٢٠٢٦</span><h1>{active}</h1></div><div><button aria-label="البحث" onClick={() => onNotice('البحث جاهز — اكتب اسم المريض أو كود الحجز')}><Search /></button><button aria-label="التنبيهات" onClick={() => onNotice('لديك ٣ تنبيهات تشغيلية')}><Bell /><i>٣</i></button><Button onClick={() => onNotice('تم فتح تسجيل مريض جديد')}><Plus /> مريض جديد</Button></div></header><div className="ops-content"><div className="ops-welcome"><div><Badge><span className="open-dot" /> المركز يعمل الآن</Badge><h2>صباح الخير، فريق بلازما</h2><p>الانتظار مستقر، ولا توجد تنبيهات حرجة حتى الآن.</p></div><div className="ops-time"><Clock3 /><span>الساعة الآن<b>١١:٣٠ ص</b></span></div></div><div className="ops-kpis">{[{t:'زيارات اليوم',v:'١٤٨',m:'+١٢٪',i:Users},{t:'في الانتظار',v:'١٩',m:'متوسط ٨ دقائق',i:Clock3},{t:'طلبات المعمل',v:'٤٢',m:'١١ نتيجة جاهزة',i:TestTube2},{t:'إيراد اليوم',v:'٨٤٬٢٥٠',m:'جنيه مصري',i:CircleDollarSign}].map(({t,v,m,i:Icon}) => <article key={t}><span><Icon /></span><small>{t}</small><b>{v}</b><em>{m}</em></article>)}</div><div className="ops-grid"><article className="ops-card flow-chart"><div className="ops-card-head"><div><small>الحركة اليومية</small><h3>الزيارات على مدار اليوم</h3></div><select aria-label="فترة الرسم البياني" onChange={(e) => onNotice(`تم عرض بيانات ${e.target.value}`)}><option>اليوم</option><option>هذا الأسبوع</option></select></div><div className="bars-chart">{[36,58,42,74,61,89,72,96,83,66,51,30].map((h,i) => <span key={i}><i style={{height:`${h}%`}} /><small>{i % 2 === 0 ? `${i+9}:٠٠` : ''}</small></span>)}</div><footer><span><i /> زيارات مكتملة</span><b>+١٨٪ عن الثلاثاء الماضي</b></footer></article><article className="ops-card appointments-card"><div className="ops-card-head"><div><small>مباشر</small><h3>آخر الحجوزات</h3></div><button onClick={() => loadAppointments(true)}>تحديث</button></div>{rows.map((r) => <div className="appointment-row" key={r.booking_code}><b>{r.booking_code}</b><div><strong>{r.patient_name}</strong><small>{r.specialty_ar} · {r.appointment_time}</small></div><Badge variant={r.status === 'checked_in' ? 'default' : 'outline'}>{r.status === 'checked_in' ? 'وصل' : 'مؤكد'}</Badge></div>)}</article></div><div className="ops-grid lower"><article className="ops-card insights"><div className="ops-card-head"><div><small>تشغيل أذكى</small><h3>ملاحظات مهمة</h3></div><Sparkles /></div><div><span className="good"><Clock3 /></span><p><b>وقت الانتظار أقل بـ ١٨٪</b><small>أداء الاستقبال أفضل من متوسط الأسبوع.</small></p></div><div><span className="warm"><FlaskConical /></span><p><b>١١ نتيجة معمل جاهزة</b><small>يمكن إرسال إشعارات الاستلام الآن.</small></p><button onClick={() => onNotice('تم إرسال تذكير للمعمل')}>إرسال تذكير</button></div></article><article className="ops-card queue"><div className="ops-card-head"><div><small>الدور الحالي</small><h3>غرفة الانتظار</h3></div><button onClick={() => onNotice('تم فتح شاشة النداء')}>شاشة النداء <ExternalLink /></button></div><div className="serving"><span>يُرجى التوجه</span><b>A105</b><strong>عيادة القلب · غرفة ٣٠٤</strong></div><div className="queue-next"><span>A106 · منى السيد</span><span>A107 · عمر خالد</span></div></article></div></div></section></div>;
+  // New staff form state
+  const [newStaff, setNewStaff] = useState({ name: '', email: '', phone: '', role: 'doctor', branchId: 'b-hawamdia', specialty: 'القلب والأوعية الدموية' });
+  const [staffSaving, setStaffSaving] = useState(false);
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.from('pmt_branches').select('*').order('created_at').then(({ data }) => {
+      if (data && data.length > 0) setBranches(data as any);
+    });
+
+    supabase.from('pmt_patients').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data && data.length > 0) setPatients(data as any);
+    });
+
+    supabase.from('pmt_appointments').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data && data.length > 0) setAppointments(data as any);
+    });
+
+    supabase.from('pmt_medical_records').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data && data.length > 0) setMedicalRecords(data as any);
+    });
+  }, []);
+
+  // Filtered lists based on current role and branch scope
+  const scopedAppointments = useMemo(() => {
+    if (activePersona.role === 'admin' || activePersona.branchId === 'all') {
+      return appointments;
+    }
+    // Branch manager / Reception / Doctor sees only their branch
+    return appointments.filter((a) => !a.branch_id || a.branch_id === activePersona.branchId);
+  }, [appointments, activePersona]);
+
+  const scopedPatients = useMemo(() => {
+    return patients;
+  }, [patients]);
+
+  // Handle Saving Clinical Diagnosis
+  const handleSaveDiagnosis = async (record: Partial<MedicalRecordItem>, appointmentId?: string) => {
+    const newRecord: MedicalRecordItem = {
+      id: `mr-${Date.now()}`,
+      patient_name: record.patient_name || '',
+      patient_phone: record.patient_phone || '',
+      patient_mrn: record.patient_mrn || 'PLZ-1001',
+      specialty_ar: record.specialty_ar || 'القلب والأوعية الدموية',
+      doctor_name: record.doctor_name || activePersona.name,
+      chief_complaint: record.chief_complaint,
+      diagnosis: record.diagnosis || '',
+      vitals: record.vitals,
+      prescriptions: record.prescriptions,
+      lab_requests: record.lab_requests,
+      radiology_requests: record.radiology_requests,
+      clinical_notes: record.clinical_notes,
+      follow_up_date: record.follow_up_date,
+      created_at: new Date().toISOString(),
+    };
+
+    setMedicalRecords([newRecord, ...medicalRecords]);
+
+    // Update appointment status to completed
+    if (appointmentId) {
+      setAppointments((prev) =>
+        prev.map((app) => (app.id === appointmentId ? { ...app, status: 'completed' } : app))
+      );
+    }
+
+    if (supabase) {
+      await supabase.from('pmt_medical_records').insert(newRecord);
+      if (appointmentId) {
+        await supabase.from('pmt_appointments').update({ status: 'completed' }).eq('id', appointmentId);
+      }
+    }
+  };
+
+  // Handle Reception Booking
+  const handleReceptionBook = async (data: any) => {
+    const code = `PMT-${Date.now().toString().slice(-6)}`;
+    const newApp: DoctorAppointmentItem = {
+      id: `app-${Date.now()}`,
+      booking_code: code,
+      patient_name: data.patient_name,
+      patient_phone: data.patient_phone,
+      patient_address: data.patient_address,
+      specialty_ar: data.specialty_ar,
+      doctor_name: data.doctor_name,
+      branch_id: data.branch_id,
+      appointment_date: data.appointment_date,
+      appointment_time: data.appointment_time,
+      visit_type: data.visit_type,
+      billing_type: data.billing_type,
+      insurance_company: data.insurance_company,
+      status: data.checkInNow ? 'checked_in' : 'confirmed',
+      notes: data.notes,
+    };
+
+    // Check if patient exists, otherwise create
+    const existing = patients.find((p) => p.phone === data.patient_phone);
+    if (!existing) {
+      const newPt: PatientData = {
+        id: `p-${Date.now()}`,
+        mrn: `PLZ-${Math.floor(1000 + Math.random() * 9000)}`,
+        full_name_ar: data.patient_name,
+        phone: data.patient_phone,
+        billing_type: data.billing_type,
+        insurance_company: data.insurance_company,
+        insurance_card_number: data.insurance_card_number,
+        address_ar: data.patient_address,
+        chronic_conditions: data.chronic_conditions || 'لا توجد أمراض مزمنة مسجلة',
+        created_at: new Date().toISOString(),
+      };
+      setPatients([newPt, ...patients]);
+      if (supabase) await supabase.from('pmt_patients').insert(newPt);
+    }
+
+    setAppointments([newApp, ...appointments]);
+    if (supabase) await supabase.from('pmt_appointments').insert(newApp);
+  };
+
+  // Handle Create Staff
+  const handleCreateStaff = async (e: FormEvent) => {
+    e.preventDefault();
+    if (activePersona.role !== 'admin') {
+      onNotice('إنشاء وتعيين الموظفين متاح للمدير العام فقط');
+      return;
+    }
+    setStaffSaving(true);
+    setTimeout(() => {
+      setStaffSaving(false);
+      onNotice(`تم إنشاء حساب ${newStaff.name} وتعيين دوره كـ (${newStaff.role}) بنجاح`);
+      setNewStaff({ name: '', email: '', phone: '', role: 'doctor', branchId: 'b-hawamdia', specialty: 'القلب والأوعية الدموية' });
+    }, 600);
+  };
+
+  const nav = [
+    ['نظرة عامة', LayoutDashboard],
+    ['عيادة الطبيب', Stethoscope],
+    ['المرضى', Users],
+    ['المواعيد والاستقبال', CalendarDays],
+    ['الفروع (٦)', Building2],
+    ['السجل الطبي', FileHeart],
+    ['المعمل', FlaskConical],
+    ['الأشعة', Radio],
+    ['الفواتير', WalletCards],
+    ['الموظفون والصلاحيات', Settings],
+  ] as const;
+
+  return (
+    <div className="ops-shell">
+      {/* Sidebar */}
+      <aside className="ops-sidebar">
+        <Brand light />
+        <nav>
+          {nav.map(([label, Icon]) => {
+            const isActive = activeTab === label;
+            return (
+              <button
+                key={label}
+                className={isActive ? 'active' : ''}
+                onClick={() => {
+                  setActiveTab(label);
+                  onNotice(`تم الانتقال إلى: ${label}`);
+                }}
+              >
+                <Icon />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* User Info & Persona Badge */}
+        <div className="ops-user">
+          <span>{activePersona.name.slice(0, 1)}</span>
+          <div>
+            <b>{activePersona.name}</b>
+            <small>{activePersona.title}</small>
+          </div>
+          <button onClick={onBack} title="تسجيل الخروج والرجوع للموقع">
+            <LogOut />
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <section className="ops-main">
+        {/* Top Header */}
+        <header>
+          <div>
+            <span>الجمعة، ١١ سبتمبر ٢٠٢٦ · برج بلازما الطبي</span>
+            <h1>{activeTab}</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button aria-label="البحث" onClick={() => onNotice('البحث السريع: اكتب اسم المريض أو رقم الهاتف أو كود الحجز')}>
+              <Search />
+            </button>
+            <button aria-label="التنبيهات" onClick={() => onNotice('تنبيه: ٤ حالات بانتظار الكشف، و١١ نتيجة معمل جاهزة')}>
+              <Bell />
+              <i>4</i>
+            </button>
+            <Button
+              onClick={() => setReceptionModalOpen(true)}
+              className="bg-teal-700 hover:bg-teal-800 text-white font-bold"
+            >
+              <Plus className="w-4 h-4 ml-1" /> مريض جديد (الاستقبال)
+            </Button>
+          </div>
+        </header>
+
+        <div className="ops-content">
+          {/* Interactive Role Persona Switcher */}
+          <RolePersonaSwitcher activePersona={activePersona} onSelectPersona={onSelectPersona} />
+
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === 'نظرة عامة' && (
+            <>
+              <div className="ops-welcome">
+                <div>
+                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
+                    <span className="open-dot" /> النظام متصل والعيادات نشطة
+                  </Badge>
+                  <h2>أهلاً بك يا {activePersona.name.split(' ')[0]}</h2>
+                  <p>
+                    {activePersona.role === 'admin'
+                      ? 'أنت تعمل بصلاحية المدير العام: إشراف كامل على الفروع الستة ومتابعة التقارير الموحدة.'
+                      : activePersona.role === 'branch_manager'
+                      ? `أنت في بوابة مدير الفرع: صلاحياتك محصورة حصرياً على (${activePersona.branchName}).`
+                      : activePersona.role === 'doctor'
+                      ? `أنت في عيادة (${activePersona.specialty}): استقبل الحالات وسجل التشخيص في السجل الطبي.`
+                      : 'أنت في بوابة الاستقبال: سجّل المرضى، حدد كشف حر أو تأمين، ووجّه المريض للعيادة.'}
+                  </p>
+                </div>
+                <div className="ops-time">
+                  <Clock3 />
+                  <span>الساعة الآن<b>٠١:١٥ م</b></span>
+                </div>
+              </div>
+
+              {/* KPIs */}
+              <div className="ops-kpis">
+                <article>
+                  <span><Users /></span>
+                  <small>إجمالي المرضى بالفرع</small>
+                  <b>{scopedPatients.length}</b>
+                  <em>نشط ومسجل</em>
+                </article>
+                <article>
+                  <span><Clock3 /></span>
+                  <small>حالات بانتظار الكشف</small>
+                  <b>{scopedAppointments.filter((a) => a.status === 'checked_in').length}</b>
+                  <em>في طابور العيادة</em>
+                </article>
+                <article>
+                  <span><ShieldCheck /></span>
+                  <small>كشوفات التأمين المعتمد</small>
+                  <b>{scopedAppointments.filter((a) => a.billing_type === 'insurance').length}</b>
+                  <em>مصر للتأمين / أكسا / بوبا</em>
+                </article>
+                <article>
+                  <span><CircleDollarSign /></span>
+                  <small>حالات كشف حر (نقدي)</small>
+                  <b>{scopedAppointments.filter((a) => a.billing_type === 'cash').length}</b>
+                  <em>بأسعار المركز الرسمية</em>
+                </article>
+              </div>
+
+              {/* Appointments & Live Queue */}
+              <div className="ops-grid">
+                <article className="ops-card appointments-card">
+                  <div className="ops-card-head">
+                    <div>
+                      <small>مباشر من الاستقبال والعيادات</small>
+                      <h3>طابور الحالات اليوم</h3>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setReceptionModalOpen(true)}>
+                      <Plus className="w-3.5 h-3.5 ml-1" /> تسجيل حالة
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    {scopedAppointments.slice(0, 5).map((r) => (
+                      <div className="appointment-row" key={r.booking_code}>
+                        <b>{r.booking_code}</b>
+                        <div>
+                          <strong>{r.patient_name}</strong>
+                          <small>{r.specialty_ar} · {r.doctor_name} · {r.appointment_time}</small>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {r.billing_type === 'insurance' ? (
+                            <span className="badge-insurance text-[9px]">تأمين</span>
+                          ) : (
+                            <span className="badge-cash text-[9px]">حر</span>
+                          )}
+                          <Badge variant={r.status === 'checked_in' ? 'default' : 'outline'} className="text-[9px]">
+                            {r.status === 'checked_in' ? 'بالعيادة' : r.status === 'completed' ? 'تم الكشف' : 'مؤكد'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+
+                {/* Branches Status Overview */}
+                <article className="ops-card">
+                  <div className="ops-card-head">
+                    <div>
+                      <small>شبكة المنشأة</small>
+                      <h3>حالة الفروع الستة</h3>
+                    </div>
+                    <Badge variant="outline" className="text-teal-800 bg-teal-50">٦ فروع</Badge>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    {branches.map((b) => (
+                      <div key={b.id} className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                        <div>
+                          <b className="text-xs text-gray-900 block">{b.name_ar}</b>
+                          <span className="text-[10px] text-gray-500">{b.city_ar} · {b.opening_hours}</span>
+                        </div>
+                        <span className={b.status === 'active' ? 'badge-branch-active text-[9px]' : 'badge-branch-const text-[9px]'}>
+                          {b.status === 'active' ? 'عامل' : `تحت الإنشاء (${b.completion_rate}٪)`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              </div>
+            </>
+          )}
+
+          {/* TAB 2: DOCTOR CLINIC WORKSPACE */}
+          {activeTab === 'عيادة الطبيب' && (
+            <DoctorWorkspace
+              doctorName={activePersona.role === 'doctor' ? activePersona.name : 'د. أحمد عادل'}
+              specialty={activePersona.specialty || 'القلب والأوعية الدموية'}
+              appointments={scopedAppointments}
+              patients={scopedPatients}
+              medicalRecords={medicalRecords}
+              onSaveDiagnosis={handleSaveDiagnosis}
+              onNotice={onNotice}
+            />
+          )}
+
+          {/* TAB 3: PATIENTS DIRECTORY */}
+          {activeTab === 'المرضى' && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">سجل المرضى الموحد</Badge>
+                  <h2>ملفات المرضى والتاريخ المرضي</h2>
+                  <p>تصفح بيانات المرضى، تصنيف الحساب (كشف حر / تأمين)، والتاريخ الصحي والزيارات السابقة.</p>
+                </div>
+                <Button onClick={() => setReceptionModalOpen(true)}>
+                  <Plus className="w-4 h-4 ml-1" /> تسجيل مريض جديد
+                </Button>
+              </div>
+
+              <div className="data-table rounded-2xl overflow-hidden shadow-sm">
+                <div className="table-head">
+                  <span>الرقم الطبي والمريض</span>
+                  <span>الهاتف والعنوان</span>
+                  <span>تصنيف الدفع</span>
+                  <span>التاريخ الصحي المزمن</span>
+                  <span>إجراء</span>
+                </div>
+
+                {scopedPatients.map((p) => {
+                  const isInsurance = p.billing_type === 'insurance';
+                  const recordCount = medicalRecords.filter(
+                    (r) => r.patient_phone === p.phone || r.patient_name === p.full_name_ar
+                  ).length;
+
+                  return (
+                    <div className="table-row" key={p.id}>
+                      <div>
+                        <b className="text-sm font-bold text-gray-900 block">{p.full_name_ar}</b>
+                        <span className="font-mono text-xs text-teal-700 font-bold">{p.mrn}</span>
+                      </div>
+
+                      <div>
+                        <span dir="ltr" className="font-mono font-medium block">{p.phone}</span>
+                        <small className="text-gray-500">{p.address_ar || 'غير محدد'}</small>
+                      </div>
+
+                      <div>
+                        {isInsurance ? (
+                          <span className="badge-insurance">
+                            <ShieldCheck className="w-3 h-3" />
+                            تأمين: {p.insurance_company}
+                          </span>
+                        ) : (
+                          <span className="badge-cash">
+                            <Activity className="w-3 h-3" />
+                            كشف حر
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-xs text-gray-600 line-clamp-1">
+                          {p.chronic_conditions || 'سليم / لا توجد أمراض مزمنة'}
+                        </span>
+                        <small className="text-teal-700 font-bold block mt-0.5">
+                          {recordCount} استشارة مسجلة
+                        </small>
+                      </div>
+
+                      <div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedPatientForHistory(p)}
+                          className="text-xs text-teal-800 border-teal-300 hover:bg-teal-50"
+                        >
+                          <FileHeart className="w-3.5 h-3.5 ml-1 text-rose-600" />
+                          فتح الملف الطبي
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: APPOINTMENTS & RECEPTION */}
+          {activeTab === 'المواعيد والاستقبال' && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">الاستقبال والطوابير</Badge>
+                  <h2>مواعيد المركز والحالات الوافدة</h2>
+                  <p>إدارة الحجوزات، تصنيف نوع الكشف (حر أم تأمين)، وتأكيد وصول المريض وتوجيهه للعيادة.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => setReceptionModalOpen(true)}>
+                    <Plus className="w-4 h-4 ml-1" /> حجز واستقبال مريض
+                  </Button>
+                </div>
+              </div>
+
+              <div className="data-table rounded-2xl overflow-hidden shadow-sm">
+                <div className="table-head">
+                  <span>كود الحجز والمريض</span>
+                  <span>العيادة والطبيب</span>
+                  <span>الميعاد والفرع</span>
+                  <span>طريقة السداد</span>
+                  <span>الحالة والإجراء</span>
+                </div>
+
+                {scopedAppointments.map((app) => (
+                  <div className="table-row" key={app.id}>
+                    <div>
+                      <b className="text-sm font-bold font-mono text-teal-800 block">{app.booking_code}</b>
+                      <strong className="text-xs text-gray-900">{app.patient_name}</strong>
+                      <span dir="ltr" className="text-[11px] text-gray-500 font-mono block">{app.patient_phone}</span>
+                    </div>
+
+                    <div>
+                      <b className="text-xs text-gray-900 block">{app.specialty_ar}</b>
+                      <small className="text-gray-600">{app.doctor_name}</small>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-bold text-gray-800 block">{app.appointment_time}</span>
+                      <small className="text-gray-500">{app.appointment_date}</small>
+                    </div>
+
+                    <div>
+                      {app.billing_type === 'insurance' ? (
+                        <span className="badge-insurance">
+                          <ShieldCheck className="w-3 h-3" />
+                          تأمين: {app.insurance_company}
+                        </span>
+                      ) : (
+                        <span className="badge-cash">
+                          <Activity className="w-3 h-3" />
+                          كشف حر
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {app.status === 'confirmed' && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setAppointments(appointments.map((a) => a.id === app.id ? { ...a, status: 'checked_in' } : a));
+                            onNotice(`تم تسجيل وصول ${app.patient_name} وتحويله لعيادة ${app.specialty_ar}`);
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] h-7 px-2.5"
+                        >
+                          <UserCheck className="w-3.5 h-3.5 ml-1" />
+                          تسجيل وصول
+                        </Button>
+                      )}
+
+                      {app.status === 'checked_in' && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setActiveTab('عيادة الطبيب');
+                            onNotice(`تم فتح عيادة ${app.specialty_ar} لفحص المريض ${app.patient_name}`);
+                          }}
+                          className="bg-teal-700 hover:bg-teal-800 text-white text-[11px] h-7 px-2.5"
+                        >
+                          <Stethoscope className="w-3.5 h-3.5 ml-1" />
+                          بدء الكشف
+                        </Button>
+                      )}
+
+                      {app.status === 'completed' && (
+                        <Badge className="bg-gray-100 text-gray-700 text-[10px]">
+                          تم الكشف والتشخيص
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: THE 6 BRANCHES */}
+          {activeTab === 'الفروع (٦)' && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">إدارة المنظومة الجغرافية</Badge>
+                  <h2>الفروع الستة لبرج بلازما الطبي</h2>
+                  <p>٤ فروع عاملة بكامل طاقتها السريرية + فرعان قيد الإنشاء والتجهيز.</p>
+                </div>
+                {activePersona.role === 'admin' && (
+                  <Badge variant="outline" className="text-teal-800 bg-teal-50 border-teal-300">
+                    صلاحية إضافة وتعديل الفروع مفعلة
+                  </Badge>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {branches.map((b) => {
+                  const isActive = b.status === 'active';
+                  return (
+                    <article key={b.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={isActive ? 'badge-branch-active' : 'badge-branch-const'}>
+                            {isActive ? 'فرع عامل ونشط' : `تحت الإنشاء (${b.completion_rate}٪)`}
+                          </span>
+                          <span className="text-xs text-gray-500 font-bold">{b.city_ar}</span>
+                        </div>
+
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{b.name_ar}</h3>
+                        <p className="text-xs text-gray-600 mb-2 flex items-start gap-1.5 leading-relaxed">
+                          <MapPin className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                          {b.address_ar}
+                        </p>
+                        <p className="text-xs text-teal-800 font-mono mb-3">
+                          <Phone className="w-3.5 h-3.5 inline ml-1" /> {b.phone}
+                        </p>
+
+                        {!isActive ? (
+                          <div className="const-progress-wrap bg-amber-50/70 p-3 rounded-xl border border-amber-100">
+                            <div className="const-progress-label text-amber-900">
+                              <span className="flex items-center gap-1 font-bold">
+                                <HardHat className="w-3.5 h-3.5 text-amber-700" />
+                                تقدم الأعمال الإنشائية:
+                              </span>
+                              <b>{b.completion_rate}٪</b>
+                            </div>
+                            <div className="const-progress-bar">
+                              <div className="const-progress-fill" style={{ width: `${b.completion_rate}%` }} />
+                            </div>
+                            <p className="text-[11px] text-amber-800 mt-2 m-0 leading-relaxed">
+                              {b.notes}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-teal-50/60 p-3 rounded-xl border border-teal-100 text-xs text-teal-900">
+                            <b>الخدمات التشغيلية: </b>
+                            {b.notes}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-4 mt-5 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {b.opening_hours}
+                        </span>
+                        {activePersona.role === 'admin' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setBranches(branches.map((item) => item.id === b.id ? { ...item, is_active: !item.is_active } : item));
+                              onNotice(`تم تحديث حالة ${b.name_ar}`);
+                            }}
+                            className="text-xs"
+                          >
+                            {b.is_active ? 'تعطيل مؤقت' : 'تفعيل'}
+                          </Button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MEDICAL RECORDS (EMR) */}
+          {activeTab === 'السجل الطبي' && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">السجل الإكلينيكي الطبي</Badge>
+                  <h2>سجل التشخيصات والتقارير الطبية</h2>
+                  <p>تاريخ الفحوصات والروشتات الصادرة من أطباء المركز لكافة الحالات.</p>
+                </div>
+              </div>
+
+              <div className="data-table rounded-2xl overflow-hidden shadow-sm">
+                <div className="table-head">
+                  <span>المريض والتاريخ</span>
+                  <span>العيادة والطبيب المعالج</span>
+                  <span>التشخيص السريري</span>
+                  <span>الروشتة المقررة</span>
+                  <span>إجراء</span>
+                </div>
+
+                {medicalRecords.map((r) => {
+                  const pt = patients.find((p) => p.phone === r.patient_phone || p.full_name_ar === r.patient_name);
+                  let rxCount = 0;
+                  if (Array.isArray(r.prescriptions)) rxCount = r.prescriptions.length;
+
+                  return (
+                    <div className="table-row" key={r.id}>
+                      <div>
+                        <b className="text-sm font-bold text-gray-900 block">{r.patient_name}</b>
+                        <small className="text-gray-500 font-mono">
+                          {new Date(r.created_at).toLocaleDateString('ar-EG')}
+                        </small>
+                      </div>
+
+                      <div>
+                        <b className="text-xs text-teal-800 block">{r.specialty_ar}</b>
+                        <small className="text-gray-600">{r.doctor_name}</small>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900 m-0 line-clamp-2">
+                          {r.diagnosis}
+                        </p>
+                        {r.chief_complaint && (
+                          <small className="text-gray-500 block mt-0.5">الشكوى: {r.chief_complaint}</small>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-xs text-gray-600 font-medium block">
+                          {rxCount > 0 ? `${rxCount} أصناف دوائية` : 'متابعة وفحوصات'}
+                        </span>
+                        {r.follow_up_date && (
+                          <small className="text-teal-700 font-bold block">إعادة: {r.follow_up_date}</small>
+                        )}
+                      </div>
+
+                      <div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (pt) setSelectedPatientForHistory(pt);
+                            else setSelectedPatientForHistory({
+                              id: 'temp',
+                              mrn: r.patient_mrn || 'PLZ-1001',
+                              full_name_ar: r.patient_name,
+                              phone: r.patient_phone,
+                              billing_type: 'cash',
+                              chronic_conditions: 'حالة مسجلة بالعيادة'
+                            });
+                          }}
+                          className="text-xs text-teal-800 border-teal-300 hover:bg-teal-50"
+                        >
+                          عرض الملف الكامل
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: LAB & RADIOLOGY */}
+          {['المعمل', 'الأشعة'].includes(activeTab) && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">الخدمات التشخيصية</Badge>
+                  <h2>{activeTab === 'المعمل' ? 'إدارة المعمل وسحب العينات' : 'قسم الأشعة والتصوير الطبي'}</h2>
+                  <p>متابعة طلبات الفحوصات المحولة من الأطباء والنتائج الجاهزة للتسليم.</p>
+                </div>
+              </div>
+
+              <div className="data-table rounded-2xl overflow-hidden shadow-sm">
+                <div className="table-head">
+                  <span>المريض</span>
+                  <span>الفحص المطلوب</span>
+                  <span>الحالة</span>
+                  <span>تاريخ الطلب</span>
+                  <span>إجراء</span>
+                </div>
+                {[
+                  { id: 'l1', name: 'أحمد محمد السيد', test: 'تحليل صورة دم كاملة CBC + سكر صائم', status: 'جاهز للتسليم', date: 'اليوم' },
+                  { id: 'l2', name: 'محمود خليل إبراهيم', test: 'رنين مغناطيسي MRI على الفقرات القطنية', status: 'قيد التنفيذ', date: 'اليوم' },
+                  { id: 'l3', name: 'منى عبد الرحمن حسن', test: 'مزرعة بول ومضادات حيوية', status: 'قيد التحضير', date: 'أمس' },
+                ].map((row) => (
+                  <div className="table-row" key={row.id}>
+                    <b>{row.name}</b>
+                    <span className="text-xs font-bold text-gray-800">{row.test}</span>
+                    <Badge variant="outline" className="text-teal-800 border-teal-300 bg-teal-50">
+                      {row.status}
+                    </Badge>
+                    <span className="text-xs text-gray-500">{row.date}</span>
+                    <Button size="sm" variant="ghost" onClick={() => onNotice('تم فتح تقرير النتيجة الرقمية')}>
+                      عرض النتيجة
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: FINANCES */}
+          {activeTab === 'الفواتير' && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">الماليات والحسابات</Badge>
+                  <h2>إيرادات الكشوفات ومطالبات التأمين</h2>
+                  <p>متابعة حركة النقدية الواردة من الكشف الحر ومطالبات شركات التأمين والمصروفات.</p>
+                </div>
+              </div>
+
+              <div className="finance-summary">
+                <article>
+                  <small>إجمالي الوارد (كشف حر + تأمين)</small>
+                  <b>٩٤٬٨٠٠ جنيه</b>
+                </article>
+                <article>
+                  <small>المصروفات التشغيلية</small>
+                  <b>١٦٬٢٠٠ جنيه</b>
+                </article>
+                <article>
+                  <small>صافي الإيراد التشغيلي</small>
+                  <b className="text-emerald-700">٧٨٬٦٠٠ جنيه</b>
+                </article>
+              </div>
+
+              <div className="data-table rounded-2xl overflow-hidden shadow-sm">
+                <div className="table-head">
+                  <span>نوع الحركة</span>
+                  <span>البند والتصنيف</span>
+                  <span>الجهة أو الشركة</span>
+                  <span>المبلغ</span>
+                  <span>التاريخ</span>
+                </div>
+                {[
+                  { id: 'f1', type: 'وارد', item: 'كشوفات نقدية (حالات حرة)', company: 'سداد نقدي مباشر', amount: '٥٢٬٠٠٠', date: 'اليوم' },
+                  { id: 'f2', type: 'وارد', item: 'مطالبات تأمين صحي', company: 'مصر للتأمين + أكسا', amount: '٤٢٬٨٠٠', date: 'اليوم' },
+                  { id: 'f3', type: 'صادر', item: 'مستلزمات معامل وأشعة', company: 'الموردين الطبيين', amount: '١٦٬٢٠٠', date: 'أمس' },
+                ].map((f) => (
+                  <div className="table-row" key={f.id}>
+                    <Badge variant={f.type === 'وارد' ? 'default' : 'outline'}>{f.type}</Badge>
+                    <b className="text-xs text-gray-900">{f.item}</b>
+                    <span className="text-xs text-gray-600">{f.company}</span>
+                    <b className="text-sm font-bold text-teal-800">{f.amount} جنيه</b>
+                    <span className="text-xs text-gray-500">{f.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: STAFF & ROLES MANAGEMENT */}
+          {activeTab === 'الموظفون والصلاحيات' && (
+            <div>
+              <div className="section-page-head">
+                <div>
+                  <Badge className="bg-teal-700 text-white">الهيكل الوظيفي والصلاحيات</Badge>
+                  <h2>تصنيفات الموظفين وإدارة الأدوار</h2>
+                  <p>تحديد الصلاحيات: المدير العام، مديرو الفروع، الاستقبال، الأطباء، وباقي الوحدات التشغيلية.</p>
+                </div>
+              </div>
+
+              {/* Roles Breakdown Cards */}
+              <div className="roles-grid mb-6">
+                {[
+                  ['المدير العام (الأدمن)', 'صاحب المنشأة، تحكم شامل في كافة الفروع والوحدات والتقارير المالية والسريرية.'],
+                  ['مدير الفرع (Branch Manager)', 'نفس صلاحيات الإدارة التشغيلية ولكن مقيدة حصرياً بالفرع الخاص به.'],
+                  ['الاستقبال (Reception)', 'تسجيل المرضى، تصنيف (كشف حر / تأمين صحي)، إدارة المواعيد، وتحويل الحالات للعيادات.'],
+                  ['الأطباء (Doctors)', 'فحص الحالات، الاطلاع على التاريخ المرضي، تسجيل التشخيص والروشتة في السجل الطبي.'],
+                  ['المعمل والتحاليل', 'استلام العينات، تنفيذ التحاليل الطبية، ورفع النتائج على النظام.'],
+                  ['الأشعة والتصوير', 'جدولة فحوصات الأشعة والرنين والسونار وإصدار التقارير.'],
+                  ['الحسابات والماليات', 'متابعة الإيرادات النقدية، مطالبات شركات التأمين، وتسويات الأطباء.'],
+                ].map(([title, desc]) => (
+                  <article key={title} className="rounded-xl">
+                    <ShieldCheck />
+                    <b>{title}</b>
+                    <p>{desc}</p>
+                  </article>
+                ))}
+              </div>
+
+              {/* Form to Create New Staff / Doctor */}
+              {activePersona.role === 'admin' && (
+                <form className="staff-create-form rounded-2xl" onSubmit={handleCreateStaff}>
+                  <div>
+                    <span className="overline">إضافة موظف / طبيب جديد</span>
+                    <h3>تعيين عضو فريق عمل جديد وربطه بفرع ودور</h3>
+                    <p>يتم تعيين الصلاحية وتحديد الفرع المسؤول عنه وعيادة التخصص فوراً.</p>
+                  </div>
+
+                  <Input
+                    placeholder="الاسم بالكامل (e.g. د. مصطفى الشريف)"
+                    value={newStaff.name}
+                    onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                    required
+                  />
+
+                  <Input
+                    type="email"
+                    placeholder="البريد الإلكتروني (e.g. m.sherif@plasmamedical.eg)"
+                    value={newStaff.email}
+                    onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                    required
+                  />
+
+                  <Input
+                    placeholder="رقم الموبايل"
+                    value={newStaff.phone}
+                    onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
+                    required
+                  />
+
+                  <select
+                    value={newStaff.role}
+                    onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
+                  >
+                    <option value="doctor">طبيب معالج</option>
+                    <option value="branch_manager">مدير فرع</option>
+                    <option value="reception">موظف استقبال</option>
+                    <option value="laboratory">أخصائي معمل</option>
+                    <option value="radiology">أخصائي أشعة</option>
+                    <option value="accounting">محاسب</option>
+                    <option value="admin">مدير نظام عام</option>
+                  </select>
+
+                  <select
+                    value={newStaff.branchId}
+                    onChange={(e) => setNewStaff({ ...newStaff, branchId: e.target.value })}
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name_ar} {b.status !== 'active' ? '(قيد الإنشاء)' : ''}
+                      </option>
+                    ))}
+                  </select>
+
+                  {newStaff.role === 'doctor' && (
+                    <select
+                      value={newStaff.specialty}
+                      onChange={(e) => setNewStaff({ ...newStaff, specialty: e.target.value })}
+                    >
+                      {clinics.map((c) => (
+                        <option key={c.name} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  <div className="col-span-2 pt-2">
+                    <Button type="submit" disabled={staffSaving} className="bg-teal-700 hover:bg-teal-800 text-white font-bold">
+                      {staffSaving ? 'جاري الحفظ...' : 'حفظ وتفعيل الحساب'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Reception Booking Modal */}
+      {receptionModalOpen && (
+        <ReceptionBookingModal
+          branches={branches}
+          defaultBranchId={activePersona.branchId !== 'all' ? activePersona.branchId : 'b-hawamdia'}
+          onClose={() => setReceptionModalOpen(false)}
+          onBook={handleReceptionBook}
+          onNotice={onNotice}
+        />
+      )}
+
+      {/* Patient Medical History Modal */}
+      {selectedPatientForHistory && (
+        <PatientHistoryModal
+          patient={selectedPatientForHistory}
+          records={medicalRecords.filter(
+            (r) => r.patient_phone === selectedPatientForHistory.phone || r.patient_name === selectedPatientForHistory.full_name_ar
+          )}
+          onClose={() => setSelectedPatientForHistory(null)}
+          onNewConsultation={() => {
+            setSelectedPatientForHistory(null);
+            setActiveTab('عيادة الطبيب');
+            onNotice(`تم فتح عيادة الفحص للمريض ${selectedPatientForHistory.full_name_ar}`);
+          }}
+        />
+      )}
+    </div>
+  );
 }
