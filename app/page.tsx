@@ -74,6 +74,51 @@ const doctorsList = [
     specialty: 'جراحة عامة وجراحة أوعية دموية'
   },
   {
+    name: 'أ.د. أشرف عبد الفضيل السويفي',
+    title: 'أستاذ واستشاري الغدد الصماء وسكر الأطفال',
+    degree: 'قصر العيني والجامعات المصرية — لأول مرة بالحوامدية',
+    next: 'الأحد · ٥:٠٠ م',
+    initials: 'أس',
+    accent: 'mint',
+    specialty: 'غدد صماء وسكر الأطفال'
+  },
+  {
+    name: 'دكتور عبد الرحمن الجابري',
+    title: 'مدرس مساعد الجراحة العامة والمناظير وجراحة أورام الثدي',
+    degree: 'عضو كلية الجراحين الملكية بإنجلترا (MRCS)',
+    next: 'اليوم · ٨:٠٠ م',
+    initials: 'عج',
+    accent: 'blue',
+    specialty: 'جراحة عامة ومناظير وجراحة أورام الثدي'
+  },
+  {
+    name: 'دكتور أحمد مجدي الهواري',
+    title: 'استشاري جراحة المسالك البولية وأمراض الذكورة والعقم',
+    degree: 'استشاري جراحات المسالك الدقيقة والمناظير',
+    next: 'غداً · ٦:٠٠ م',
+    initials: 'أهـ',
+    accent: 'sand',
+    specialty: 'مسالك بولية وأمراض ذكورة وعقم'
+  },
+  {
+    name: 'د/ دعاء عبد الرازق',
+    title: 'استشاري أمراض الدم',
+    degree: 'استشاري أمراض الدم والاعتلالات المناعية والتجلط',
+    next: 'الإثنين · ٤:٣٠ م',
+    initials: 'دع',
+    accent: 'mint',
+    specialty: 'أمراض الدم'
+  },
+  {
+    name: 'دكتور محمد صابر قطب',
+    title: 'أخصائي أمراض القلب والأوعية الدموية',
+    degree: 'رسم قلب · إيكو · متابعة الضغط والكوليسترول',
+    next: 'اليوم · ٧:٣٠ م',
+    initials: 'مق',
+    accent: 'blue',
+    specialty: 'أخصائي أمراض القلب والأوعية الدموية'
+  },
+  {
     name: 'د. أحمد عادل',
     title: 'استشاري القلب والقسطرة التداخلية',
     degree: 'قصر العيني',
@@ -669,8 +714,8 @@ function BookingWizard({ step, setStep, data, setData, onClose }: { step: number
   const canContinue = step === 1
     ? Boolean(data.branchId && data.specialty && data.insurance && (data.insurance === 'no' || data.insuranceCompany))
     : step === 2 ? data.doctor
-    : step === 3 ? data.date && data.time
-    : true;
+      : step === 3 ? data.date && data.time
+        : true;
 
   const selectedDate = ({ '2026-09-11': 'الجمعة ١١ سبتمبر', '2026-09-12': 'السبت ١٢ سبتمبر', '2026-09-13': 'الأحد ١٣ سبتمبر' } as Record<string, string>)[data.date] || data.date;
 
@@ -749,8 +794,8 @@ function BookingWizard({ step, setStep, data, setData, onClose }: { step: number
               )}
 
               <p className="step-hint">اختار التخصص المطلوب</p>
-              <div className="booking-options max-h-72 overflow-y-auto pr-1">
-                {clinics.map(({ name, icon: Icon }) => (
+              <div className="booking-options">
+                {clinics.slice(0, 6).map(({ name, icon: Icon }) => (
                   <button
                     key={name}
                     type="button"
@@ -1444,10 +1489,10 @@ function ERP({
                     {activePersona.role === 'admin'
                       ? 'أنت تعمل بصلاحية المدير العام: إشراف كامل على الفروع الستة ومتابعة التقارير الموحدة.'
                       : activePersona.role === 'branch_manager'
-                      ? `أنت في بوابة مدير الفرع: صلاحياتك محصورة حصرياً على (${activePersona.branchName}).`
-                      : activePersona.role === 'doctor'
-                      ? `أنت في عيادة (${activePersona.specialty}): استقبل الحالات وسجل التشخيص في السجل الطبي.`
-                      : 'أنت في بوابة الاستقبال: سجّل المرضى، حدد كشف حر أو تأمين، ووجّه المريض للعيادة.'}
+                        ? `أنت في بوابة مدير الفرع: صلاحياتك محصورة حصرياً على (${activePersona.branchName}).`
+                        : activePersona.role === 'doctor'
+                          ? `أنت في عيادة (${activePersona.specialty}): استقبل الحالات وسجل التشخيص في السجل الطبي.`
+                          : 'أنت في بوابة الاستقبال: سجّل المرضى، حدد كشف حر أو تأمين، ووجّه المريض للعيادة.'}
                   </p>
                 </div>
                 <div className="realtime-clock-badge">
